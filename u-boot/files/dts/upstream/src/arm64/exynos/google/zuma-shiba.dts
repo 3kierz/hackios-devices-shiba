@@ -7,15 +7,14 @@
  * pins, GPIO, USB PHY or UFS), so this tree holds only what U-Boot can use as the bootloader left it: the RAM, the
  * memory the firmware and the remote processors keep, the panel's framebuffer, the arch timer and PSCI.
  *
- * Every number was read from the Pixel 8a's own Android device tree (the akita port this one comes from); the Pixel 8
- * shares the SoC, the 8 GiB of RAM and the statically placed carve-outs of Google's common zuma tree (the sized dma
- * heaps differ between the two, and Linux places those itself). Check them against this phone's tree before the first
- * run (devices/shiba/pull-boot-info.sh pulls /sys/firmware/fdt into devices/shiba/boot-info/fdt.dtb): the four 2 GiB banks of memory@..., psci { method = "smc" }, the arch timer's clock-frequency,
+ * Every number is the phone's own, checked against a Pixel 8's Android device tree (/sys/firmware/fdt, pulled by
+ * devices/shiba/pull-boot-info.sh into boot-info/fdt.dtb; bootloader ripcurrent-17.0-15199481, 2026-11-22): the same
+ * as the Pixel 8a's this file was first written from, but pkvm_guest_firmware (0xd0000 here, 0x100000 on the 8a): the four 2 GiB banks of memory@..., psci { method = "smc" }, the arch timer's clock-frequency,
  * and the statically placed /reserved-memory regions (the ones in DRAM; regions Linux places itself by size and
  * alloc-ranges are not placed yet when U-Boot runs). Regions that are not no-map in Android's tree are no-map here
  * too: nothing in them is U-Boot's or the loader's.
  *
- * Status: carried over from the Pixel 8a, not yet run on a Pixel 8.
+ * Status: checked against the Pixel 8's tree, not yet run on a Pixel 8.
  */
 
 /dts-v1/;
@@ -157,7 +156,7 @@
 
 		/* from the Android device tree, as it placed them */
 		pkvm_guest_firmware@8b000000 {
-			reg = <0x0 0x8b000000 0x0 0x100000>;
+			reg = <0x0 0x8b000000 0x0 0xd0000>;     /* the Pixel 8's (the 8a's is 0x100000) */
 			no-map;
 		};
 		ect_binary@90000000 {

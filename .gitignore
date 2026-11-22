@@ -5,3 +5,5 @@ boot-info/*
 __pycache__/
 # every private working note (handoff, todo lists, plans, crash catalogue): never in git
 private-untracked/
+# this phone's own device tree (pull-boot-info.sh, then copied): it carries the phone's identifiers, kept local
+prebuilt/device-tree.dtb

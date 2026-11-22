@@ -37,14 +37,25 @@ USB working. The two phones share the SoC and most of the board. The table says 
   same code. The firmware download, rings and station are 4383 code, and they do not run unless `wifi_4398=1`.
 - **Bluetooth**: the BCM4398's, on the same UART. The 8a's driver is built but not in the defaults (`bt=1` to try).
 - **Cameras**: other sensors (boitata main, dokkaebi front, sandworm ultra-wide) and a laser AF. The driver is left out.
-- **GNSS**: a Broadcom BCM4775 on spi_21 (the 8a's is Samsung's Kepler). The driver is left out.
+- **GNSS**: a Broadcom BCM4775 on spi@111E0000 (the 8a's is Samsung's Kepler). The driver is left out.
 - **Mobile network**: the same Exynos 5300 as the 8a, which only reached signal bars there. It is off unless `modem=N`.
 - **Fingerprint, sensors, sleep, NFC**: as on the 8a, not yet.
 
+## Checked against a Pixel 8's own tree (2026-11-22, bootloader ripcurrent-17.0-15199481, Android 17)
+
+`pull-boot-info.sh` on a Pixel 8, compared with the Pixel 8a's tree:
+- the SoC's block addresses (`soc/zuma.addrs`): identical;
+- the RAM (4 x 2 GiB at the same places) and the 41 fixed `/reserved-memory` regions: identical except
+  pkvm_guest_firmware (0xd0000, not 0x100000; `zuma-shiba.dts` now has the Pixel 8's);
+- the boot image: header version 4, LZ4 kernel, no ramdisk in boot, vendor_boot without a tree, as on the 8a;
+- the parts: google-shoreline panel, `goodix,brl-d` touch with LDO4M at 3.3 V, two CS35L41s on spi@111C0000, the
+  CS40L26A at 11 V / 2.5 A with f0-default 0x244000 and redc-default 0x68000, MAX77759 + PCA9468, BCM4775 on
+  spi@111E0000, Wi-Fi on pcie@13120000 (max-link-speed 3; trained to Gen2 here). All as this port assumes.
+
 ## Things to check on the first run
 
-- The framebuffer address `0xfac00000` and DECON0's `TRIG_CON` value `0x3070` (U-Boot's preboot prints which it found).
-- The fixed `/reserved-memory` regions in `zuma-shiba.dts` against this phone's `/sys/firmware/fdt`.
-- `boot_a`'s size for the AVB footer (`fastboot getvar partition-size:boot_a`).
+- The framebuffer address `0xfac00000` and DECON0's `TRIG_CON` value `0x3070` (U-Boot's preboot prints which it found;
+  the bootloader's log, which says it, needs root to read).
+- `boot_a`'s size for the AVB footer (`fastboot getvar partition-size:boot_a`; 0x4000000 assumed).
 - `touchscreen=1`: the chip's version block should read "BERLIN" and the Berlin-D's id.
 - `pcie=5`: `chipcommon: chip 0x4398`.

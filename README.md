@@ -35,7 +35,7 @@ The two boards were compared in Google's device trees, area by area:
 | Wi-Fi | Broadcom BCM4383 on PCIe 1 (Gen2) | **Broadcom BCM4398** on PCIe 1 | the link and the chip's id (`pcie=5`) expect 0x4398; the BCM4383 firmware steps refuse to run without `wifi_4398=1` |
 | Bluetooth | BCM4383 over the APM UART | BCM4398, the same UART and pins | built, not in the defaults (`bt=1` to try) |
 | Cameras | IMX787 main, IMX712 front and UW | **boitata, dokkaebi, sandworm** + laser AF | driver left out (`# CONFIG_HAKIOS_AKITA_CAMERA is not set`) |
-| GNSS | Samsung Kepler, through the modem | **Broadcom BCM4775** on spi_21 | driver left out |
+| GNSS | Samsung Kepler, through the modem | **Broadcom BCM4775** on spi@111E0000 | driver left out |
 | Modem | Exynos 5300 on PCIe 0 | Exynos 5300, the same PCIe setup | unchanged (off unless `modem=N`) |
 
 ### Why the drivers are still called `akita_*`

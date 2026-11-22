@@ -1,5 +1,5 @@
 /*
- * The Pixel 8a's GNSS receiver (NOT the Pixel 8's, a Broadcom BCM4775 on spi_21: this driver is left out of shiba.config): Samsung SLSI's "Kepler" (gps.cfg's K041), a chip of its own on zuma's spi@111E0000 (USI3
+ * The Pixel 8a's GNSS receiver (NOT the Pixel 8's, a Broadcom BCM4775 on spi@111E0000: this driver is left out of shiba.config): Samsung SLSI's "Kepler" (gps.cfg's K041), a chip of its own on zuma's spi@111E0000 (USI3
  * of HSI0), powered and code-loaded by the modem (hakios.akita_modem.c: gnss_boot_run, channel 240) and then spoken to
  * over SPI. It computes the fix itself: what it sends once a second holds the position, the time and the satellites, so
  * the phone needs no positioning engine -- only the link, the transport and the messages that start a session.

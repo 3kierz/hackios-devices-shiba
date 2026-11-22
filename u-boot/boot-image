@@ -1,7 +1,7 @@
 # How Google's bootloader on the Pixel 8 wants the image of `fastboot boot` (tools/mkubootimg.py, boot_image_style()).
 #
-# Read on the Pixel 8a from its own boot partition (the akita port, 2026-10-31; bootloader akita-16.4-14540574) and taken over
-# for the Pixel 8, whose bootloader is of the same family; check it against this phone's with devices/shiba/pull-boot-info.sh:
+# Read on the Pixel 8a (the akita port, 2026-10-31) and confirmed on a Pixel 8's own boot partition (devices/shiba/
+# pull-boot-info.sh, 2026-11-22; bootloader ripcurrent-17.0-15199481, Android 17):
 # boot image header version 4, page 4096, the kernel in LZ4's legacy frame (02 21 4c 18), no ramdisk in boot (Android's
 # is in init_boot); vendor_boot header version 4 without a device tree (the Pixel 8 family has vendor_kernel_boot).
 # The bootloader takes the device tree and the vendor ramdisks from the phone's own active slot and puts the ramdisks in
