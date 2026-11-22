@@ -71,71 +71,10 @@
 	};
 
 	/*
-	 * USB: the DWC3 at 0x11210000 (Android's tree: usb@11210000, samsung,exynos9-dwusb, with a dwc3 child in peripheral
-	 * mode). Google's bootloader drives it for its own fastboot just before it starts U-Boot, so its clocks, its PHY
-	 * (phy@11100000), the eUSB repeater and its SysMMU (sysmmu@11040000) are as that left them: none of them is named
-	 * here, and U-Boot's Samsung DWC3 glue then only takes the controller. High speed first: the USB 3 PHY would want
-	 * more of what the bootloader may have set up.
+	 * Not here yet: USB (the DWC3 at 0x11210000 and its eUSB repeater on hsi2c@10CB0000) and UFS (ufs@13200000). The
+	 * Pixel 8a's U-Boot had drivers of its own for them that were never published; HakiOS's first boot needs neither (the
+	 * loader and its payload come in the boot image). They come back here with those drivers.
 	 */
-	usb@11210000 {
-		compatible = "samsung,exynos850-dwusb3";
-		ranges = <0x0 0x0 0x11210000 0x10000>;
-		#address-cells = <1>;
-		#size-cells = <1>;
-
-		usb@0 {
-			compatible = "snps,dwc3";
-			reg = <0x0 0x10000>;
-			dr_mode = "peripheral";
-			maximum-speed = "high-speed";
-			snps,dis_u2_susphy_quirk;
-			snps,dis_enblslpm_quirk;
-			/* as Android's tree has it for this controller */
-			snps,dis-u2-freeclk-exists-quirk;
-		};
-	};
-
-	/*
-	 * The I2C bus of the eUSB repeater (Android's tree: hsi2c@10CB0000, samsung,usi-i2c-v2; eusb-repeater@3E on it).
-	 * Samsung's USI HSI2C, set up as I2C by the bootloader, which uses the repeater for its own fastboot. Its input
-	 * clock as Android's kernel log gives it ("IPCLK = 200000000"), as a fixed clock: U-Boot has no zuma clock driver.
-	 */
-	/*
-	 * UFS: the controller as Google's bootloader leaves it (enabled, the link up in HS gear 4 on two lanes; Android's tree:
-	 * ufs@13200000, samsung,exynos-ufs, fixed-prdt-req_list-ocs). Only its standard UFSHCI registers are named:
-	 * U-Boot takes it over as it is (drivers/ufs/ufs-hakios.c) and resets nothing.
-	 */
-	ufs@13200000 {
-		compatible = "hakios,zuma-ufs";
-		/* standard HCI, vendor HCI, UniPro, UFS protector, PHY, CPort (Android's tree, in its order) */
-		reg = <0x0 0x13200000 0x0 0x200>, <0x0 0x13201100 0x0 0x2000>, <0x0 0x13280000 0x0 0x8000>,
-		      <0x0 0x132a0000 0x0 0xa014>, <0x0 0x13204000 0x0 0x4000>, <0x0 0x13208000 0x0 0x804>;
-		hakios,sysreg = <0x13020000>;           /* sysreg_ufs: IO coherency at 0x710 */
-		/* the device's supply (ufs-vcc: gpp0-1 of pinctrl@10840000) and its pins (gph5: refclk-out, rst-n, function 2) */
-		hakios,vcc-gpio = <0x10840000 1>;
-		hakios,pinmux = <0x13060000 0xff 0x22>;
-		hakios,pmu-phy-iso = <0x15463ec0>;      /* PMU + 0x3ec0, bit 0 */
-		hakios,mclk-rate = <178000000>;         /* Android's log: "mclk: 178000000" */
-		hakios,cal-board = <1>;                 /* brd-for-cal */
-		hakios,gear = <4>;
-		hakios,lanes = <2>;
-	};
-
-	hsi2c_clk: hsi2c-clk {
-		compatible = "fixed-clock";
-		#clock-cells = <0>;
-		clock-frequency = <200000000>;
-	};
-
-	i2c@10cb0000 {
-		compatible = "samsung,exynos7-hsi2c";
-		reg = <0x0 0x10cb0000 0x0 0x1000>;
-		#address-cells = <1>;
-		#size-cells = <0>;
-		clocks = <&hsi2c_clk>;
-		clock-names = "hsi2c";
-		clock-frequency = <400000>;
-	};
 
 	reserved-memory {
 		#address-cells = <2>;

@@ -1,9 +1,9 @@
 # HakiOS's U-Boot for the Pixel 8 (shiba, Google Tensor G3 "zuma"): started by Google's bootloader from RAM
 # (fastboot boot), never flashed. U-Boot's generic Exynos phone board (board/samsung/exynos-mobile), which takes over
-# from a vendor bootloader the way Linux does, with what zuma has in U-Boot today: nothing but the CPU, the RAM, the
-# timer, PSCI and the framebuffer the bootloader left running. No clocks, pins, GPIO, USB, UFS or eMMC: U-Boot has no
-# driver for any of zuma's, so there is no fastboot, no keys and no storage here yet, and the loader is taken from the
-# boot image's ramdisk (cmd/hakios.c) and shows what it does on the screen only.
+# from a vendor bootloader the way Linux does, with what zuma has in U-Boot today: the CPU, the RAM, the timer, PSCI and
+# the framebuffer the bootloader left running, plus HakiOS's zuma pieces (HAKIOS_ZUMA: the watchdogs, the console in
+# ramoops). No clocks, pins, GPIO, USB, UFS or eMMC drivers: no fastboot, no keys and no storage here yet, and the loader
+# is taken from the container the boot image carries (cmd/hakios.c).
 CONFIG_ARM=y
 CONFIG_SKIP_LOWLEVEL_INIT=y
 # the arch timer's clock-frequency in the phone's device tree; CNTFRQ_EL0 is not set by the firmware
@@ -11,12 +11,11 @@ CONFIG_COUNTER_FREQUENCY=24576000
 CONFIG_ARMV8_CNTFRQ_BROKEN=y
 CONFIG_POSITION_INDEPENDENT=y
 CONFIG_ARCH_EXYNOS=y
-# no Exynos family (ARCH_EXYNOS9's only board is the E850-96, which would take the board's place), as upstream's
-# exynos-mobile_defconfig
-CONFIG_TARGET_EXYNOS_MOBILE=y
 CONFIG_SYS_MALLOC_LEN=0x2000000
 CONFIG_SYS_MALLOC_F_LEN=0x16000
-# four banks of 2 GiB (zuma-shiba.dts, from the phone's memory@... nodes)
+CONFIG_TARGET_EXYNOS_MOBILE=y
+CONFIG_HAKIOS_ZUMA=y
+# four banks of 2 GiB (zuma-shiba.dts, from the phone's memory@... nodes); U-Boot runs in the highest (zuma.patch)
 CONFIG_NR_DRAM_BANKS=4
 CONFIG_DEFAULT_DEVICE_TREE="exynos/google/zuma-shiba"
 CONFIG_OF_UPSTREAM=y
@@ -31,20 +30,18 @@ CONFIG_SYS_PBSIZE=1024
 # exynos-mobile's misc_init_r() wants an eMMC (the boot partition for capsules, a fastboot buffer): this phone has UFS,
 # which U-Boot cannot reach, and a failed init call would stop U-Boot
 # CONFIG_MISC_INIT_R is not set
-# preboot unmasks the panel's trigger before anything else (hakios-shiba.env)
 CONFIG_USE_PREBOOT=y
 CONFIG_HUSH_PARSER=y
-CONFIG_CMD_BOOTMENU=y
-CONFIG_CMD_PAUSE=y
-CONFIG_CMD_POWEROFF=y
 CONFIG_CMD_HAKIOS=y
+CONFIG_CMD_BOOTEFI=y
 CONFIG_CMD_SMC=y
-# how long each step takes, and whether the caches are on (time, dcache, icache): runs read back from pstore
+# how long each step takes, and the caches (time, icache, dcache)
 CONFIG_CMD_TIME=y
 CONFIG_CMD_CACHE=y
-# the screen is the console: no serial port is reachable on the phone
+# the screen is the console, and pstore (Android's ramoops) keeps it over the restart: no serial port is reachable
 CONFIG_VIDEO=y
 CONFIG_VIDEO_SIMPLE=y
+CONFIG_CONSOLE_MUX=y
 CONFIG_CONSOLE_RECORD=y
 CONFIG_CONSOLE_RECORD_INIT_F=y
 CONFIG_CONSOLE_RECORD_OUT_SIZE=0x6000
@@ -55,29 +52,6 @@ CONFIG_SYSRESET=y
 CONFIG_ARM_SMCCC=y
 CONFIG_SYSRESET_PSCI=y
 # CONFIG_PSCI_RESET is not set
-# USB as a device, on the DWC3 Google's bootloader used for its own fastboot a moment before: Samsung's glue
-# (samsung,exynos850-dwusb3) with no clocks, resets or PHY in the tree, so that U-Boot takes the controller as it was
-# left (zuma-shiba.dts). U-Boot's fastboot (never writing the phone's storage: no FASTBOOT_FLASH) and the loader's own
-# USB device protocol (EFI_QCOM_USB_DEVICE: xl).
-CONFIG_USB=y
-CONFIG_DM_USB_GADGET=y
-CONFIG_USB_GADGET=y
-CONFIG_USB_DWC3=y
-CONFIG_MISC=y
-CONFIG_USB_DWC3_GENERIC=y
-CONFIG_USB_GADGET_MANUFACTURER="Google"
-CONFIG_USB_GADGET_VENDOR_NUM=0x18d1
-CONFIG_USB_GADGET_PRODUCT_NUM=0x4ee0
-CONFIG_USB_FUNCTION_FASTBOOT=y
-CONFIG_FASTBOOT_BUF_ADDR=0x900000000
-CONFIG_FASTBOOT_BUF_SIZE=0x8000000
-# CONFIG_FASTBOOT_FLASH is not set
-CONFIG_FASTBOOT_CMD_OEM_CONSOLE=y
-CONFIG_FASTBOOT_OEM_RUN=y
-CONFIG_EFI_QCOM_USB_DEVICE=y
-# I2C (Samsung's HSI2C) for the eUSB repeater (eusb repeater, cmd/hakios_eusb.c)
-CONFIG_SYS_I2C_S3C24X0=y
-CONFIG_CMD_I2C=y
 # The HakiOS loader keeps U-Boot's boot services while the kernel runs and has a watchdog of its own:
 # a watchdog U-Boot started would bite the phone in the middle of a run.
 # CONFIG_WATCHDOG_AUTOSTART is not set
@@ -86,15 +60,6 @@ CONFIG_CMD_I2C=y
 # CONFIG_EFI_CAPSULE_ON_DISK is not set
 # CONFIG_EFI_CAPSULE_FIRMWARE_RAW is not set
 # CONFIG_TOOLS_MKEFICAPSULE is not set
-# UFS: zuma's host brought up as Google's Linux driver does it (drivers/ufs/ufs-exynos-gs.c, HS gear 4), as SCSI disks
-# (one a LUN: sda..sdd under Android) and, through U-Boot's EFI layer, as block devices the loader can read
-CONFIG_SCSI=y
-CONFIG_UFS=y
-CONFIG_UFS_EXYNOS_GS=y
-CONFIG_CMD_SCSI=y
-CONFIG_CMD_PART=y
-CONFIG_EFI_PARTITION=y
-CONFIG_PARTITION_TYPE_GUID=y
-# U-Boot's block cache: off. Its buffers are not page-aligned, which the Exynos UFS host cannot take (it read them
-# wrong; the UFS core now bounces such transfers, but the cache gains nothing here)
-# CONFIG_BLOCK_CACHE is not set
+# no image signing on the host (and no OpenSSL headers needed to build): nothing here signs
+# CONFIG_TOOLS_LIBCRYPTO is not set
+# CONFIG_TOOLS_KWBIMAGE is not set

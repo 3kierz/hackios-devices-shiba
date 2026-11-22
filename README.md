@@ -70,12 +70,39 @@ the 8a's camera tuning. Point them at `shiba`, or leave them unused.
 
 ## First boot
 
-Run this on a machine where fastboot can reach the phone (not WSL2):
+### HakiOS's U-Boot on the Pixel 8
+
+The Pixel 8a port booted through a U-Boot of its own that was never published (hakios-uefi commit `1c65228`). This
+repository brings its own, built from public sources:
+
+- upstream U-Boot (v2026.07) and its generic Exynos phone board (`board/samsung/exynos-mobile`);
+- HakiOS's `hakios` command from [oosexgang/hakios-uefi pull request 2](https://github.com/oosexgang/hakios-uefi/pull/2),
+  which finds the loader and payload the boot image carries behind U-Boot;
+- `u-boot/zuma.patch` and `u-boot/files/board/samsung/exynos-mobile/hakios_zuma.c` (`CONFIG_HAKIOS_ZUMA`): U-Boot's load
+  address noted for `hakios load`, U-Boot run in the highest RAM bank (clear of every carve-out), `zuma wdt` (both
+  cluster watchdogs stopped, cl0 re-armed as a slow net the kernel feeds), and a `pstore` console in Android's ramoops
+  pmsg zone (read it back in Android as root: `cat /sys/fs/pstore/pmsg-ramoops-0`).
+
+Not in it yet: USB, the touch screen's power, UFS and the slot marking the 8a's U-Boot had. None is needed for the
+first boot, which runs `hello` from RAM.
+
+### Building and running
+
+Once, on the build machine (WSL is fine for building):
 
 ```sh
-devices/shiba/mk-first-boot.sh        # build/shiba/hakios-shiba.img: U-Boot, the loader, the kernel and hello
+sudo apt install clang lld lz4 7zip                     # the loader (clang, lld-link), the boot image (lz4)
+git -C uefi fetch origin pull/2/head:pr2 && git -C uefi checkout pr2   # after tools/hakios-device.py sync hakios-uefi
+```
+
+An AArch64 GCC for U-Boot: `sudo apt install gcc-aarch64-linux-gnu`, or Arm's toolchain unpacked anywhere with its
+`bin/` on `PATH` (`aarch64-none-elf-`). The kernel: `make kernel` (theos with `sdks/iPhoneOS16.5.sdk`), or, for this
+first run only, `cp prebuilt/hakios-kernel hakios-kernel` (older, and without the zuma drivers, which this run does not use).
+
+```sh
+FIRST_ARGS="cpus=1" devices/shiba/mk-first-boot.sh   # build/shiba/hakios-shiba.img: U-Boot, the loader, the kernel, hello
 adb reboot bootloader
-fastboot boot build/shiba/hakios-shiba.img
+fastboot boot build/shiba/hakios-shiba.img           # from Windows' platform-tools: WSL2 does not see the phone
 ```
 
 `fastboot boot` runs the image from RAM only. Nothing is flashed, and a restart returns the phone to Android.
@@ -83,6 +110,7 @@ fastboot boot build/shiba/hakios-shiba.img
 | Seen | Not seen: look at |
 |---|---|
 | U-Boot's banner | nothing at all: the framebuffer's address (`zuma-shiba.dts`; `pull-boot-info.sh` reads the bootloader's log for it), the boot image's kind (`u-boot/boot-image`) |
+| `[oosexgang] watchdog 0x10060000: ... counting, stopped`, then `kept as a net` | a restart about two minutes in: the watchdogs (`zuma wdt`, preboot) |
 | `[oosexgang] display: DECON0 trigger unmasked` | `TRIG_CON is not 0x3070`: the Pixel 8's bootloader leaves DECON0 otherwise (`hakios-shiba.env`, preboot) |
 | `[oosexgang] hakios: payload of ...`, `loader of ...` | `the boot image has no ramdisk` or `nothing known at`: cmd/hakios.c's container search |
 | `== XNULOADER v3 ==`, `CurrentEL=2`, `platform akita` | `platform qemu-virt`: U-Boot's tree did not reach the loader |

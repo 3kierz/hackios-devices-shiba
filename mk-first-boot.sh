@@ -13,8 +13,11 @@
 #   Darwin!"; then the phone restarts by itself (into Android). A step that is not reached is the one to look at
 #   (devices/shiba/README.md, "First boot").
 #
-# Needs: make kernel (hakios-kernel); an AArch64 GCC for U-Boot (uefi/u-boot/build.sh; LLVM's linker does not link a
-# working U-Boot); u-boot/ (uefi/u-boot/apply.sh, then this device's files copied in, which this does).
+# Needs: make kernel (hakios-kernel; prebuilt/hakios-kernel copied there will do for this first run); an AArch64 GCC for
+# U-Boot (uefi/u-boot/build.sh, CROSS_COMPILE=...; LLVM's linker does not link a working U-Boot); clang and lld-link for
+# the loader; uefi/ (tools/hakios-device.py sync hakios-uefi) with pull request 2 of oosexgang/hakios-uefi (hakios load
+# finds the container behind U-Boot): git -C uefi fetch origin pull/2/head:pr2 && git -C uefi checkout pr2. u-boot/ is made
+# by uefi/u-boot/apply.sh; this device's files and devices/shiba/u-boot/zuma.patch are put in by this script.
 set -e
 here=$(cd "$(dirname "$0")" && pwd)
 cd "$here/../.."
@@ -26,12 +29,23 @@ mkdir -p "$out"
 xnuloader/build.sh >/dev/null
 python3 tools/hakios-config.py check >/dev/null
 
-args=$(python3 tools/hakios-config.py args)
+# the configuration's arguments, or FIRST_ARGS=... instead (FIRST_ARGS="cpus=1": one core, as the 8a's first run)
+args=${FIRST_ARGS-$(python3 tools/hakios-config.py args)}
+echo "mk-first-boot.sh: kernel $(strings hakios-kernel | grep -m1 'Darwin Kernel Version' | cut -c1-90)"
+echo "mk-first-boot.sh: arguments: -v $args"
 xnuloader/mkpayload.py -o "$out/payload.bin" kernel=hakios-kernel ramdisk=prebuilt/userland/hello --cmdline "-v $args"
 
 [ -d u-boot ] || uefi/u-boot/apply.sh
 cp -r "$here/u-boot/files/." u-boot/          # this device's U-Boot files, as apply.sh does at the start
 cp uefi/u-boot/files/cmd/hakios.c u-boot/cmd/hakios.c
+# the zuma pieces in the generic Exynos phone board (hakios_zuma.c built, U-Boot's load address noted): once
+if git -C u-boot apply --check "$here/u-boot/zuma.patch" 2>/dev/null; then
+	git -C u-boot apply "$here/u-boot/zuma.patch"
+elif ! git -C u-boot apply --check -R "$here/u-boot/zuma.patch" 2>/dev/null; then
+	echo "mk-first-boot.sh: u-boot/ takes neither devices/shiba/u-boot/zuma.patch nor its reverse" >&2; exit 1
+fi
+grep -q hk_load_base u-boot/cmd/hakios.c ||
+	{ echo "mk-first-boot.sh: uefi/ has no hakios load for a container behind U-Boot (oosexgang/hakios-uefi pull request 2)" >&2; exit 1; }
 uefi/u-boot/build.sh shiba
 
 python3 tools/mkubootimg.py -d shiba -p "$out/payload.bin" -o "$out/hakios-shiba.img"

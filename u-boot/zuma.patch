@@ -1,0 +1,99 @@
+diff --git a/board/samsung/exynos-mobile/Kconfig b/board/samsung/exynos-mobile/Kconfig
+index ed7d16b8..e4508dbe 100644
+--- a/board/samsung/exynos-mobile/Kconfig
++++ b/board/samsung/exynos-mobile/Kconfig
+@@ -15,4 +15,11 @@ config SYS_CONFIG_NAME
+ config SYS_VENDOR
+ 	default "samsung"
+ 
++config HAKIOS_ZUMA
++	bool "HakiOS on Google's zuma phones (Pixel 8, 8 Pro, 8a)"
++	help
++	  The watchdogs stopped (zuma wdt), a console kept in Android's
++	  ramoops region (pstore), and where the bootloader loaded U-Boot
++	  noted for the hakios command.
++
+ endif # TARGET_EXYNOS_MOBILE
+diff --git a/board/samsung/exynos-mobile/Makefile b/board/samsung/exynos-mobile/Makefile
+index e049ed21..8c4a1bab 100644
+--- a/board/samsung/exynos-mobile/Makefile
++++ b/board/samsung/exynos-mobile/Makefile
+@@ -3,3 +3,4 @@
+ # Copyright (C) 2025 Kaustabh Chakraborty <kauschluss@disroot.org>
+ 
+ obj-y := exynos-mobile.o
++obj-$(CONFIG_HAKIOS_ZUMA) += hakios_zuma.o
+diff --git a/board/samsung/exynos-mobile/exynos-mobile.c b/board/samsung/exynos-mobile/exynos-mobile.c
+index 6b2b1523..ec6ca19e 100644
+--- a/board/samsung/exynos-mobile/exynos-mobile.c
++++ b/board/samsung/exynos-mobile/exynos-mobile.c
+@@ -57,7 +57,7 @@ static struct mm_region exynos_mem_map[CONFIG_NR_DRAM_BANKS + 2] = {
+ 
+ struct mm_region *mem_map = exynos_mem_map;
+ 
+-static const char *exynos_prev_bl_get_bootargs(void)
++static __maybe_unused const char *exynos_prev_bl_get_bootargs(void)
+ {
+ 	void *prev_bl_fdt_base = (void *)get_prev_bl_fdt_addr();
+ 	int chosen_node_offset, ret;
+@@ -129,6 +129,8 @@ static void exynos_parse_dram_banks(const void *fdt_base)
+ 	}
+ }
+ 
++/* (the eMMC phones' setup: built only where misc_init_r() runs it; zuma's HakiOS U-Boot has no eMMC and leaves it out) */
++#if IS_ENABLED(CONFIG_MISC_INIT_R)
+ static void exynos_env_setup(void)
+ {
+ 	const char *bootargs = exynos_prev_bl_get_bootargs();
+@@ -294,6 +296,8 @@ static int exynos_fastboot_setup(void)
+ 	return 0;
+ }
+ 
++#endif /* CONFIG_MISC_INIT_R */
++
+ int board_fdt_blob_setup(void **fdtp)
+ {
+ 	/* If internal FDT is not available, use the external FDT instead. */
+@@ -326,13 +330,27 @@ int board_early_init_f(void)
+ 	return 0;
+ }
+ 
++#if IS_ENABLED(CONFIG_HAKIOS_ZUMA)
++/* HakiOS: where the bootloader loaded U-Boot, before U-Boot relocates itself (hakios_zuma.c, cmd/hakios.c) */
++extern unsigned long hk_load_base;
++extern char _start[];
++#endif
++
+ int dram_init(void)
+ {
+ 	unsigned int i;
+ 
+-	/* Select the largest RAM bank for U-Boot. */
++#if IS_ENABLED(CONFIG_HAKIOS_ZUMA)
++	if (hk_load_base == 1)
++		hk_load_base = (unsigned long)_start;
++#endif
++	/*
++	 * Select the largest RAM bank for U-Boot. HakiOS on zuma: of banks of the same size the highest, which Android's
++	 * firmware leaves free (the lowest holds the carve-outs, the bootloader's framebuffer and HakiOS's payload).
++	 */
+ 	for (i = 0; i < CONFIG_NR_DRAM_BANKS; i++) {
+-		if (gd->ram_size < mem_map[i + 1].size) {
++		if (gd->ram_size < mem_map[i + 1].size ||
++		    (IS_ENABLED(CONFIG_HAKIOS_ZUMA) && gd->ram_size == mem_map[i + 1].size)) {
+ 			gd->ram_base = mem_map[i + 1].phys;
+ 			gd->ram_size = mem_map[i + 1].size;
+ 		}
+@@ -358,6 +376,7 @@ int board_init(void)
+ 	return 0;
+ }
+ 
++#if IS_ENABLED(CONFIG_MISC_INIT_R)
+ int misc_init_r(void)
+ {
+ 	int ret;
+@@ -370,3 +389,4 @@ int misc_init_r(void)
+ 
+ 	return exynos_fastboot_setup();
+ }
++#endif
