@@ -1,0 +1,84 @@
+#!/bin/bash
+# build user space (JOBFILE= job file), make a boot image, boot it once with fastboot boot (nothing flashed), log for
+# SECS seconds into LOGDIR (default ~/shiba/logs/run: build-boot.log, test-console.log, test-k.log). Extra boot-args in
+# BOOTARGS (usb_lost_reboot=90 after them: a phone that loses its USB link restarts into the active slot, Android;
+# usb_lost_reboot=0 in BOOTARGS turns it off -- the first one counts; test_reboot_after=600 too: a test build restarts
+# after ten minutes whatever happens, test_reboot_after=0 in BOOTARGS for a longer run); THERMAL="thermal=0 dvfs=0" turns
+# the thermal driver and DVFS off. Never set RC or JOBS (userland/build.sh reads them).
+# What works is BUILT INTO the kernel since 11-12 (CONFIG_DEFAULTS in devices/shiba/configs/shiba.config: touchscreen,
+# buttons, fuel gauge, usbmux, thermal, DVFS, the Mali, Metal, the display's flips, the root and /var, Wi-Fi): each holds
+# unless the command line names it, x=0 turns one off (wifi=0 pcie=0: a run without Wi-Fi). The command line keeps what
+# the loader reads (cpus, ufs, ufs_write, torch), the GPU's display arguments, the failsafes and the run's own.
+cd ~/shiba/hackios-kernel; D=~/shiba/darwin-flash; S=${LOGDIR:-$HOME/shiba/logs/run}; mkdir -p $S
+# DARWIN (11-17): the iOS build the user space is made for MUST be the one on the phone's system volume -- since 11-16
+# that is 16.6.1 d16ap (arm64e; rebase-13mini.md). build.sh's own default, ../sysimage, is 16.7.16 for the iPhone X
+# (arm64): a run built against it gave an arm64 HakiosMetal no process loads (no Metal, mediaserverd aborting, no
+# sound) and injected code hooking 16.7.16's addresses. DARWIN=../sysimage for a run on a 16.7.16 system.
+export DARWIN=${DARWIN:-../sysimage-d16ap}
+# GPU=1, the default unless the job file is mali_draw_test's own: CoreAnimation on the Mali (METAL_PLUGIN=ca with the
+# iPhone 11's library from ~/ca-share), the panel at 120 Hz, zero-copy scan-out. GPU=0: iOS draws in software -- what the
+# Wi-Fi/USB runs of 11-09 did by accident, 10-25 fps, the big cores at 75 C (the tester's video of 23:12 was one).
+# (The GPU arguments take ~140 of the 495 characters: 453 with them alone; GPU=0 when a test needs the room.)
+case "${JOBFILE:-rc.jobs.maldraw}" in rc.jobs.maldraw) GPU=${GPU-0};; *) GPU=${GPU-1};; esac
+if [ "$GPU" = 1 ]; then
+  export METAL_PLUGIN=${METAL_PLUGIN-ca} EXTRA_SHARE=${EXTRA_SHARE-$HOME/ca-share}
+  case "$BOOTARGS" in *ca_metallib=*) ;; *) BOOTARGS="ca_metallib=/redwood/share/ca-share/QuartzCore-default.metallib display_hz=120 fbwidth=1080 fbheight=2340 fbscale=3 fbsubtype=2340 fb_zc=1 anim_max=1 $BOOTARGS";; esac
+fi
+env -u RC -u JOBS BIG_IN_ROOT=1 RC_JOBS=${JOBFILE:-rc.jobs.maldraw} HAKIOS_METAL_OUT=${HAKIOS_METAL_OUT:-ios-mali} LOCKDOWND=1 BLUETOOTH=${BLUETOOTH-1} CRYPTEXES=flash FLASHBOOT=1 REST=1 userland/build.sh > $S/build-boot.log 2>&1 || { echo build failed; exit 1; }
+# the safety arguments first (a long command line loses its end: the loader keeps 607 characters, ~110 of them its own),
+# unless BOOTARGS gives them itself
+SAFE=""; case "$BOOTARGS" in *usb_lost_reboot=*) ;; *) SAFE="usb_lost_reboot=90";; esac
+# the ten-minute restart always (the tester, 11-10 01:35: back on as a failsafe while nobody watches; test_reboot_after=0
+# in BOOTARGS for a longer run by hand)
+TRA=600
+case "$BOOTARGS" in *test_reboot_after=*) ;; *) SAFE="$SAFE test_reboot_after=$TRA";; esac
+# usbmux's serial (lockdownd's UDID: a phone identifier, never in git) from ~/shiba/usb_serial
+USBSER=""; [ -s ~/shiba/usb_serial ] && USBSER="usb_serial=$(head -1 ~/shiba/usb_serial)"
+[ -n "$USBSER" ] || echo "bootrun: no ~/shiba/usb_serial (lockdownd's UniqueDeviceID: ideviceinfo -s -k UniqueDeviceID): usbmux without it"
+# (torch=3: the flashlight for Darwin -- a hardware switch like touchscreen=1, not a test argument; torch=0 in BOOTARGS: off.
+# The vibration motor, haptic=5, is OFF by default since 11-11 at the tester's word: every test boot buzzed ~48 s in --
+# Darwin itself plays a tap and 0.3 s of vibration then -- and his cat minded. haptic=5 in BOOTARGS for a run with it.)
+HW=""; case "$BOOTARGS" in *torch=*) ;; *) HW="torch=3";; esac
+# (sound is built in since 11-12: aoc=3 amp=2 speaker=1. QUIET=1 -- a run with nobody there, the tester's rule: nothing
+# audible unless he is with the phone -- adds speaker=0: the amplifiers stay off, the AoC still runs)
+# ... and restart_fastboot=1: a restart of the test boot by itself (its time limit, the USB host gone) ends in the
+# bootloader, which is silent, not in the installed image, which is not
+[ -n "$QUIET" ] && HW="$HW speaker=0 restart_fastboot=1"
+# hakios_arm64e=1 (11-17): the d16ap / 16.6.1 userland is arm64e and the kernel execs arm64e only with it
+# (bsd/dev/arm/kern_machdep.c). Without it launchd cannot start, the kernel resets before USB is up and the
+# bootloader boots the ACTIVE SLOT instead -- every test boot looked like "the installed image is running".
+# Harmless for an arm64 userland. hakios_arm64e=0 in BOOTARGS turns it off.
+case "$BOOTARGS" in *hakios_arm64e=*) ;; *) HW="$HW hakios_arm64e=1";; esac
+LC_ALL=C grep -aq "touchscreen=1 buttons=1" hakios-kernel || { echo "bootrun: hakios-kernel has no built-in arguments (CONFIG_DEFAULTS, 11-12): make kernel"; exit 1; }
+CMDLINE="debug=0x8 $SAFE cpus=9 $USBSER ${THERMAL:+$THERMAL }ufs=2 ufs_write=1 $HW $BOOTARGS"
+[ ${#CMDLINE} -gt 490 ] && { echo "bootrun: the command line is ${#CMDLINE} characters: more than the kernel gets whole (490: at 491 its last character was lost, 11-10); shorten BOOTARGS"; exit 1; }
+xnuloader/mkpayload.py -o $D/test-payload.bin kernel=hakios-kernel ramdisk=userland/root.apfs resident=userland/flashboot.apfs --cmdline "$CMDLINE" >/dev/null && tools/mkubootimg.py -d shiba -p $D/test-payload.bin -o $D/test.img >/dev/null || exit 1
+# to the bootloader from wherever the phone is -- and again if it turns up elsewhere meanwhile (a test build's own
+# restart, usb_lost_reboot or test_reboot_after, lands in Android: a run started then waited for fastboot for ever)
+for i in $(seq 1 90); do
+  fastboot devices 2>/dev/null | grep -q . && break
+  if adb devices 2>/dev/null | grep -q "device$"; then adb reboot bootloader >/dev/null 2>&1; sleep 8
+  elif adb -P 5039 devices 2>/dev/null | grep -q "device$"; then adb -P 5039 reboot bootloader >/dev/null 2>&1; sleep 8   # (the second adb server: the port's log)
+  elif lsusb | grep -q 05ac; then timeout 30 python3 devices/shiba/tools/usbmux-reboot.py bootloader >/dev/null 2>&1; sleep 8
+  else sleep 2; fi
+done
+fastboot devices 2>/dev/null | grep -q . || { echo "no fastboot device (adb: $(adb devices | grep -c 'device$'), usb: $(lsusb | grep -o '05ac:[0-9a-f]*\|18d1:[0-9a-f]*'))"; exit 1; }
+timeout 120 fastboot boot $D/test.img >/dev/null 2>&1 || { echo boot failed; exit 1; }
+for i in $(seq 1 60); do lsusb | grep -q 05ac && break; sleep 2; done
+rm -f $S/test-console.log $S/test-k.log
+for i in $(seq 1 20); do timeout 2 python3 devices/shiba/tools/usbmux-log.py /dev/null >/dev/null 2>&1; [ $? -eq 124 ] && break; sleep 2; done
+timeout ${SECS:-90} python3 devices/shiba/tools/usbmux-log.py $S/test-console.log >/dev/null 2>&1 &
+timeout ${SECS:-90} python3 devices/shiba/tools/usbmux-log.py -k $S/test-k.log >/dev/null 2>&1
+wait
+# no log at all: nearly always the computer's usbmuxd ("RX transfer stalled"), not the phone -- which then restarts
+# itself (usb_lost_reboot), with QUIET=1 into the bootloader
+if [ ! -s $S/test-console.log ] && [ ! -s $S/test-k.log ]; then
+  echo "bootrun: NO LOG CAME. usbmuxd is $(systemctl is-active usbmuxd 2>/dev/null); if the phone is on the bus (usb: $(lsusb | grep -o '05ac:[0-9a-f]*\|18d1:[0-9a-f]*')) restart it first: sudo systemctl restart usbmuxd"
+fi
+# a quiet run whose log is not the test boot's: the test image reset before its kernel was up and the bootloader
+# started the installed one (11-15: with its start sound). Out of it at once.
+if [ -n "$QUIET" ] && [ -s $S/test-k.log ] && ! grep -aq "restart_fastboot=1" $S/test-k.log; then
+  echo "bootrun: THIS LOG IS NOT THE TEST BOOT'S (no restart_fastboot=1 in its line): the installed image is running -- sent to the bootloader"
+  timeout 30 python3 devices/shiba/tools/usbmux-reboot.py bootloader >/dev/null 2>&1
+fi
+echo "usb now: $(lsusb | grep -o '05ac:[0-9a-f]*\|18d1:[0-9a-f]*')"

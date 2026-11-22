@@ -1,0 +1,45 @@
+# devices/shiba/drivers/power/conf: the Pixel 8's own power drivers (docs/drivers-config.md, docs/porting/drivers.md).
+
+driver AKITA_BATTERY
+	file    bsd/dev/hakios.akita_battery.c
+	requires BATTERY
+	help    the Pixel 8's battery and charger state: the MAX77759's fuel gauge and charger over zuma's hsi2c@10cb0000,
+	help    polled every 5 s and given to HakiosBattery, Darwin's power source (fuelgauge=1); read only
+
+driver AKITA_ACPM
+	file    bsd/dev/hakios.akita_acpm.c
+	help    Google's ACPM (the power firmware on zuma's APM) as a client: requests over its IPC, polled; for the thermal
+	help    sensors, and the PMIC and the processors' clocks to come
+
+driver AKITA_THERMAL
+	file    bsd/dev/hakios.akita_thermal.c
+	requires AKITA_ACPM
+	help    the Pixel 8's SoC temperatures (BIG, MID, LITTLE, G3D, ISP, TPU, AUR) through ACPM every 2 s, the board's eight
+	help    thermistors (the S2MPG15's meter) and Android's VIRTUAL-SKIN from them: kern.hakios.thermal_*; the phone powered
+	help    off three readings in a row at thermal_stop= (100) on the SoC, thermal_skin_stop= (55) of skin, soc_therm 58,
+	help    the battery 68 (thermal=1); THERMAL's sysctls, for zuma
+
+driver AKITA_DVFS
+	file    bsd/dev/hakios.akita_dvfs.c
+	requires AKITA_ACPM AKITA_THERMAL
+	help    the Pixel 8's CPU clusters' clocks through ACPM: a governor every 100 ms (the busiest core's share), held
+	help    down when hot: BIG from 75 C, all from 85; step-wise ceilings for the skin (BIG 39 C, MID 41, LITTLE 43) and
+	help    the GPU's clocks over 45 C of skin or 90 of G3D (dvfs=1; kern.hakios.dvfs_mhz, dvfs_skin_caps)
+
+driver AKITA_RTC
+	file    bsd/dev/hakios.akita_rtc.c
+	requires AKITA_ACPM
+	help    the Pixel 8's real-time clock (the S2MPG14 PMIC's, through ACPM) for the kernel's time of day when neither
+	help    epoch= nor the loader gives one: a start with nobody at the computer no longer begins in 1970
+
+driver AKITA_POWER
+	file    bsd/dev/hakios.akita_power.c
+	requires AKITA_RTC
+	help    the Pixel 8's way down: iOS's Shut Down powers the phone off, Restart resets it into the active slot (PSCI),
+	help    instead of the way back to the loader (still taken for xl's runs: loader_return_after)
+
+driver AKITA_MCT
+	file    bsd/dev/hakios.akita_mct.c
+	help    zuma's multi-core timer (MCT v3 at 0x100d0000) as the wake of idle cores that power down (cpuidle=1,
+	help    osfmk/arm64/psci_smp.c): core N's comparator, its interrupt routed to it, armed for the core's next deadline
+	help    while its own timer is stopped; a line every 30 s of how often cores powered down

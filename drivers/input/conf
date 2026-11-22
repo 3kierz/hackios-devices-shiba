@@ -1,0 +1,9 @@
+# devices/shiba/drivers/input/conf: the Pixel 8's own input drivers (docs/drivers-config.md, docs/porting/drivers.md).
+
+driver AKITA_KEYS
+	file    bsd/dev/hakios.akita_keys.c
+	help    the Pixel 8's power and volume keys: three pins of zuma's always-on pin controller, read (buttons=1)
+
+driver AKITA_TOUCH
+	file    bsd/dev/hakios.akita_touch.c
+	help    the Pixel 8's touch screen: a Goodix Berlin-D (goodix,brl-d; the 8a's GT9895 is the same family) on the SPI controller of zuma's HSI0 USI2, polled (touchscreen=1; U-Boot powers it)

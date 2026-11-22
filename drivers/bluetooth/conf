@@ -1,0 +1,7 @@
+# devices/shiba/drivers/bluetooth/conf: the Pixel 8's Bluetooth (docs/drivers-config.md, docs/porting/drivers.md).
+
+driver AKITA_BT
+	file    bsd/dev/hakios.akita_bt.c
+	help    the Pixel 8's Bluetooth: the BCM4398's HCI (the 8a's BCM4383 driver; same UART and pins, untested on the 4398) on zuma's serial@155D0000 (USI1 of the APM block, H4 with RTS/CTS);
+	help    bt=1: the chip switched on, its firmware (fw/BCM.hcd) loaded, its name said; bt=2: the controller given to
+	help    iOS's bluetoothd through drivers/bluetooth's BT_HOST

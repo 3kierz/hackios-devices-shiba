@@ -1,0 +1,10 @@
+# devices/shiba/drivers/wifi/conf: the Pixel 8's Wi-Fi (docs/drivers-config.md, docs/porting/drivers.md).
+
+driver AKITA_WIFI
+	file    bsd/dev/hakios.akita_pcie.c
+	file    bsd/dev/hakios.akita_bcm.c
+	requires WIFI_STATION
+	help    the Pixel 8's Wi-Fi chip, a Broadcom BCM4398 on zuma's PCIe channel 1 (the link and its identity: pcie=5; the chip's steps are still the 8a's BCM4383's and need wifi_4398=1): the link brought up step by step
+	help    (pcie=N: the pins and the chip's power, the PHY, link training, the chip's configuration space and identity),
+	help    then the chip's own steps (wifi=N: its cores, its ARM halted, firmware and calibration from fw/, the ARM
+	help    started, the firmware's shared area, the rings, the scan, en0 and the station Darwin's Wi-Fi side talks to)
