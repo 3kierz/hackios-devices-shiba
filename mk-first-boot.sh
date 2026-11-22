@@ -33,10 +33,19 @@ python3 tools/hakios-config.py check >/dev/null
 # hello built from source (make hello: hello_wait= and the drivers' sysctls) when there is one, else the prebuilt one
 hello=userland/hello; [ -f "$hello" ] || hello=prebuilt/userland/hello
 echo "mk-first-boot.sh: user space: $hello"
+# FW_IMAGE=userland/root.apfs: the small image carried too, as the second RAM disk (md1), hello staying the root (md0,
+# the loader's resident image): the drivers read the phone's firmware from its fw/ without a root mounted
+# (drivers/storage/hakios.image.c, hakios_image_file) -- haptic=3, amp=3, aoc=3, the Mali
+if [ -n "${FW_IMAGE:-}" ]; then
+	disks="resident=$hello ramdisk=$FW_IMAGE"
+	echo "mk-first-boot.sh: firmware image: $FW_IMAGE ($(( $(stat -c %s "$FW_IMAGE") / 1048576 )) MB, md1)"
+else
+	disks="ramdisk=$hello"
+fi
 args=${FIRST_ARGS-$(python3 tools/hakios-config.py args)}
 echo "mk-first-boot.sh: kernel $(strings hakios-kernel | grep -m1 'Darwin Kernel Version' | cut -c1-90)"
 echo "mk-first-boot.sh: arguments: -v $args"
-xnuloader/mkpayload.py -o "$out/payload.bin" kernel=hakios-kernel ramdisk="$hello" --cmdline "-v $args"
+xnuloader/mkpayload.py -o "$out/payload.bin" kernel=hakios-kernel $disks --cmdline "-v $args"
 
 [ -d u-boot ] || uefi/u-boot/apply.sh
 cp -r "$here/u-boot/files/." u-boot/          # this device's U-Boot files, as apply.sh does at the start
