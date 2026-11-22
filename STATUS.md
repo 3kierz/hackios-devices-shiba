@@ -3,7 +3,15 @@
 HakiOS (iOS 16.6.1 userland of the iPhone 13 mini, arm64e, on XNU) on the Google Pixel 8 (Tensor G3, Mali-G715).
 Last update: 2026-11-22.
 
-**Not yet booted on a Pixel 8.** This port starts from the Pixel 8a port
+**First boot on a Pixel 8, 2026-11-22:** Google's bootloader (`fastboot boot`) started this repository's U-Boot, which
+started the HakiOS loader at EL2 (`platform akita`, zuma's), which started XNU at EL1 on one core: the GICv3 found, memory
+set up, the RAM disk mounted, and `Hello from user space on Darwin!` from process 1, which then exits (the kernel panics
+on that, by design for this test, and its log goes back to the loader, which restarts the phone). The whole run's log is
+in [boot-info/first-boot-2026-11-22-hello.txt](boot-info/first-boot-2026-11-22-hello.txt), read back in Android with
+`pull-log.sh`: U-Boot appends its console to the bootloader's own log buffer, the one place that survives a restart here
+(Android's pstore zones do not survive any restart on this phone). Kernel: the prebuilt one of 2026-10-25, `cpus=1`.
+
+Beyond that first boot, this port starts from the Pixel 8a port
 ([Martinvlba/hakios-devices-akita](https://github.com/Martinvlba/hakios-devices-akita), 2026-11-17). On the 8a it
 boots iOS from its own storage, with display, touch, GPU and Metal, sound, Wi-Fi, Bluetooth, battery, thermals and
 USB working. The two phones share the SoC and most of the board. The table says what that means for the Pixel 8.
@@ -52,6 +60,14 @@ USB working. The two phones share the SoC and most of the board. The table says 
 - the parts: google-shoreline panel, `goodix,brl-d` touch with LDO4M at 3.3 V, two CS35L41s on spi@111C0000, the
   CS40L26A at 11 V / 2.5 A with f0-default 0x244000 and redc-default 0x68000, MAX77759 + PCA9468, BCM4775 on
   spi@111E0000, Wi-Fi on pcie@13120000 (max-link-speed 3; trained to Gen2 here). All as this port assumes.
+
+## Next
+
+- All nine cores (`cpus=9`: the loader's EL2 trampoline), then a kernel built from source (`make kernel`: theos and the
+  iPhoneOS 16.5 SDK) with the zuma drivers in.
+- The panel is **google-bigsurf** on this phone (product id 0x84a050, the bootloader's log), not shoreline: the display
+  driver's rate and brightness commands are to be checked against panel-google-bigsurf.c.
+- USB, touch power and UFS in U-Boot, which the 8a's unpublished U-Boot had.
 
 ## Things to check on the first run
 
