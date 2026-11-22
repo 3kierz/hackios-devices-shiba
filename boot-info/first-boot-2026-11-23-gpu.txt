@@ -1,0 +1,59 @@
+[   79.838114]: mali: steps 1 to 9 in 8 s
+[   87.839280]: mali: 1: reading the power domains and the GPU
+[   87.839359]: mali: 1: PMU: G3D status 0x1, embedded G3D status 0x1
+[   87.839657]: mali: 1: GPU_ID 0xb8a21020 (arch 11.8, rev 10, product 2, r1p2), L2_FEATURES 0x08140306, CORE_FEATURES 0x4, MMU_FEATURES 0x2830, AS_PRESENT 0xff, CSF_ID 0x04100412
+[   87.839873]: mali: 1: present: shaders 0x1110055, tiler 0x1, L2 0x1; ready: shaders 0x0, tiler 0x0, L2 0x0; coherency features 0x1, enabled 0x0; L2_CONFIG 0x140000
+[   87.840106]: mali: 1: as found: GPU_STATUS 0x0, GPU_IRQ_RAWSTAT 0x100, GPU_FAULTSTATUS 0x0 at 0x0, MMU_IRQ_RAWSTAT 0x0, AS0 status 0x0, fault 0x0 at 0x0, AS1 fault 0x0 at 0x0, JOB_IRQ_RAWSTAT 0x0, MCU_STATUS 0x0
+[   87.843443]: mali: 1: the cycle counter: 5472 in a millisecond (the GPU's clock, in kHz)
+[   87.845277]: mali: 2: a soft reset of the GPU
+[   87.847235]: mali: 2: reset; coherency enabled now 0x1f; L2_CONFIG 0x1140000, slice hash 36db6d 5b6db6 0; GPU_ID still 0xb8a21020
+[   87.849027]: mali: 3: the L2 cache's power on
+[   87.851710]: mali: 3: L2 ready 0x1
+[   87.854144]: mali: 4: the firmware into memory, page tables, address space 0
+[   87.857555]: mali: 4: fw/mali_csffw-r54p2.bin: 299008 bytes, magic 0xc3f13a6e, header 0.3, hash 0x02080000, entries to 0x318
+[   87.860046]: mali: 4: va 0x00400000-0x00410000 r-- cache 1: 128 bytes of the file, at 0x88b9b4000
+[   87.862506]: mali: 4: va 0x00410000-0x00420000 r-- cache 1: 5396 bytes of the file, at 0x88b944000
+[   87.864887]: mali: 4: va 0x00000000-0x00010000 r-- cache 1: 128 bytes of the file, at 0x88b954000
+[   87.867339]: mali: 4: va 0x00800000-0x00820000 r-x cache 1: 92104 bytes of the file, at 0x88b978000
+[   87.869969]: mali: 4: va 0x02000000-0x02040000 rw- cache 1 zeroed: 184704 bytes of the file, at 0x88ba38000
+[   87.872476]: mali: 4: va 0x01000000-0x01040000 r-- cache 1 zeroed: 184704 bytes of the file, at 0x88b9f8000
+[   87.874831]: mali: 4: va 0x03000000-0x03040000: protected, left out (no protected memory here, as Google's driver without its allocator)
+[   87.877206]: mali: 4: va 0x04000000-0x04010000 rw- cache 3 shared zeroed: 8192 bytes of the file, at 0x88ba88000
+[   87.879473]: mali: 4: log verbosity 3 (of 0..3)
+[   87.881914]: mali: 4: the firmware's log: 65536 bytes at 0x5200000 (17 enable bits)
+[   87.884700]: mali: 4: 7 sections, 12 page tables; level 0 at 0x88b9a4000
+[   87.887097]: mali: 4: address space 0: transtab 0x88b9a4000, memattr 0x84c8d888d8f88, transcfg 0x42000006
+[   87.889333]: mali: 5: the MCU started
+[   87.891613]: mali: 5: the MCU is enabled
+[   87.896261]: mali: 5: GLB_VERSION 0x02080000 (2.8.0), GLB_FEATURES 0x0, input at 0x04002000, output at 0x04006000, groups 8, ... 000000a0 0000003e 00000071 00000002
+[   87.898562]: mali: 5: THE FIRMWARE RUNS: its global interface is filled in
+[   87.903457]: mali: 5: after the start: GPU_STATUS 0x0, GPU_IRQ_RAWSTAT 0x600, GPU_FAULTSTATUS 0x0 at 0x0, MMU_IRQ_RAWSTAT 0x0, AS0 status 0x0, fault 0x0 at 0x0, AS1 fault 0x0 at 0x0, JOB_IRQ_RAWSTAT 0x80000000, MCU_STATUS 0x1
+[   87.905857]: mali: 5: shaders ready 0x0, tiler ready 0x0
+[   87.908298]: mali: 6: the firmware's global interface: a ping, the shader cores allowed, what it offers
+[   87.910853]: mali: 6: version 0x2080000, 8 groups every 0xa0 bytes; input 0x4002000, output 0x4006000; GLB_REQ 0x0, GLB_ACK 0x0
+[   87.914589]: mali: 6: the firmware answered the ping
+[   87.918332]: mali: 6: shader cores 0x1110055 allowed
+[   87.923379]: mali: 6: the shader cores left to the firmware: off after 10000 us idle
+[   87.925845]: mali: 7: a command stream group (slot 0) with one queue, in address space 1
+[   87.928410]: mali: 7: group 0: features 0x0, 8 streams every 12 bytes, suspend buffer 26368 bytes; stream 0: features 0x7105f
+[   87.929857]: mali: 7: group 0 and its queue started: GLB_REQ 0x10e ACK 0x10e DB_REQ 0x1 DB_ACK 0x1 FATAL 0x0; CSG_REQ 0x1 ACK 0x1 DB_REQ 0x1 DB_ACK 0x1; CS_REQ 0x1501 ACK 0x1 cmd at 0x0 wait 0x0 blocked 0x0 fault 0x0 fatal 0x0
+[   87.940206]: mali: 7: group 0 and its queue started: GPU_STATUS 0x0, GPU_IRQ_RAWSTAT 0x600, GPU_FAULTSTATUS 0x0 at 0x0, MMU_IRQ_RAWSTAT 0x20000, AS0 status 0x0, fault 0x0 at 0x0, AS1 fault 0x0 at 0x0, JOB_IRQ_RAWSTAT 0x80000001, MCU_STATUS 0x1
+[   87.942862]: mali: fwlog (group 0 and its queue started): insert 0x0, extract 0x0
+[   87.945465]: mali: 8: the first job: four instructions that store two words into a page of ours
+[   87.948109]: mali: 8: 5 instructions in the ring; the queue's doorbell rung
+[   87.952090]: mali: 8: the queue read to 0x28 (of 0x28), active 1; the target holds 0xc0ffee11 0x5a5a1234
+[   87.954763]: mali: 8: THE GPU RAN OUR COMMANDS: both words are what the instructions stored
+[   87.954880]: mali: 8: after the job: GLB_REQ 0x10e ACK 0x10e DB_REQ 0x1 DB_ACK 0x1 FATAL 0x0; CSG_REQ 0x1 ACK 0x20000001 DB_REQ 0x1 DB_ACK 0x1; CS_REQ 0x1501 ACK 0x1 cmd at 0x0 wait 0x0 blocked 0x0 fault 0x0 fatal 0x0
+[   87.965747]: mali: 8: after the job: GPU_STATUS 0x1, GPU_IRQ_RAWSTAT 0x600, GPU_FAULTSTATUS 0x0 at 0x0, MMU_IRQ_RAWSTAT 0x20000, AS0 status 0x0, fault 0x0 at 0x0, AS1 fault 0x0 at 0x0, JOB_IRQ_RAWSTAT 0x80000001, MCU_STATUS 0x1
+[   87.968560]: mali: fwlog (after the job): insert 0x0, extract 0x0
+[   87.971345]: mali: 9: the first compute job: a shader of four instructions on the shader cores
+[   87.974169]: mali: 9: 26 instructions; the shader at 0x5030000, its descriptors at 0x5040000; the doorbell rung
+[   87.978407]: mali: 9: the queue read to 0xf8 (of 0xf8); the shader's word 0x600df00d, the marker 0x9a55ed00
+[   87.981194]: mali: 9: A SHADER RAN ON THE SHADER CORES: it stored 0x600df00d
+[   87.985152]: mali: 9: status update acknowledged
+[   87.990804]: mali: 9: group 0: endpoints current 0x7, requested 0x70707, progress timer state 0x0; EP_REQ asked 0x80010707; stream blocked reason 0x0, cmd at 0x000000000
+[   87.996544]: mali: 9: shaders ready 0x0 (in transition 0x0), tiler ready 0x1; the stream: requested resources 0x1, scoreboards 0x0, wait sync value 0x0
+[   87.996677]: mali: 9: after the compute job: GLB_REQ 0x10e ACK 0x10e DB_REQ 0x1 DB_ACK 0x1 FATAL 0x0; CSG_REQ 0x20000031 ACK 0x31 DB_REQ 0x0 DB_ACK 0x0; CS_REQ 0x1501 ACK 0x1 cmd at 0x50000f8 wait 0x0 blocked 0x0 fault 0x0 fatal 0x0
+[   87.1008317]: mali: 9: after the compute job: GPU_STATUS 0x1, GPU_IRQ_RAWSTAT 0x600, GPU_FAULTSTATUS 0x0 at 0x0, MMU_IRQ_RAWSTAT 0x20000, AS0 status 0x0, fault 0x0 at 0x0, AS1 fault 0x0 at 0x0, JOB_IRQ_RAWSTAT 0x1, MCU_STATUS 0x1
+[   87.1011323]: mali: fwlog (after the compute job): insert 0x0, extract 0x0
+[   87.1014388]: mali: stop: the GPU reset again: done

@@ -98,7 +98,12 @@ USB working. The two phones share the SoC and most of the board. The table says 
   the AoC inactive); the phone's own aoc.bin (27 MB) copied, **authenticated and loaded by the GSA in 342 ms**, started
   with the Pixel 8's parameters (board id 0x40302, gnss-type 0): **running after 700 ms, 94 services**; a 440 Hz tone
   through audio_playback1, bound to the speaker, the DSP in playback, the amps powered up: **heard from the phone**.
-- The other drivers, one at a time: ~~`pcie=5`~~ ~~`haptic=1`~~ ~~`amp=1`~~ ~~`aoc=3`~~ (the Wi-Fi link: it should
+- **The GPU, 2026-11-23** ([boot-info/first-boot-2026-11-23-gpu.txt](boot-info/first-boot-2026-11-23-gpu.txt)): `mali=9`: the
+  Mali-G715 (GPU_ID 0xb8a21020: arch 11.8, r1p2) found powered by the bootloader at ~5.5 MHz of cycle counter a ms; reset,
+  the L2 on, the phone's mali_csffw-r54p2.bin loaded (7 sections, 12 page tables), **the MCU running the firmware**
+  (interface 2.8.0, 8 groups), a ping answered, the shader cores allowed; a command stream group started; **the first job
+  ran** (both words stored) and **a compute shader ran on the shader cores** (0x600df00d); the GPU reset again.
+- The other drivers, one at a time: ~~`pcie=5`~~ ~~`haptic=1`~~ ~~`amp=1`~~ ~~`aoc=3`~~ ~~`mali=9`~~ (the Wi-Fi link: it should
   say chip 0x4398), `thermal=1`.
 - The panel is **google-bigsurf** on this phone (product id 0x84a050, the bootloader's log), not shoreline: the display
   driver's rate and brightness commands are to be checked against panel-google-bigsurf.c.
