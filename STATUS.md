@@ -76,7 +76,11 @@ USB working. The two phones share the SoC and most of the board. The table says 
   the panel is google-bigsurf (BOE), not shoreline; the driver now has both (`panel_name=`, bigsurf by default) and takes
   the bootloader's framebuffer over (3 buffers, flipped by DPP0 between frames); bigsurf's own rate commands move it from
   the bootloader's 60 Hz to 120 Hz (60 frames in 0.5 s). Brightness and display on/off need iOS asking (a later run).
-- The other drivers, one at a time: `pcie=5` (the Wi-Fi link: it should
+- **The Wi-Fi link, 2026-11-22** ([boot-info/first-boot-2026-11-22-wifi-pcie.txt](boot-info/first-boot-2026-11-22-wifi-pcie.txt)):
+  `pcie=5`: the chip powered (WL_REG_ON), the PHY's PLL, CDR and calibration, the link up at Gen2 x1 on the first try, and
+  the chip: Broadcom 14e4:4444, `chipcommon: chip 0x4398, revision 3`. Its ID word gives interconnect type 6 and no core
+  count, so the 4383's core discovery (the enumeration ROM) will need looking at before the 4398's firmware can go in.
+- The other drivers, one at a time: ~~`pcie=5`~~ (the Wi-Fi link: it should
   say chip 0x4398), `haptic=1`, `amp=1`, `thermal=1`.
 - The panel is **google-bigsurf** on this phone (product id 0x84a050, the bootloader's log), not shoreline: the display
   driver's rate and brightness commands are to be checked against panel-google-bigsurf.c.

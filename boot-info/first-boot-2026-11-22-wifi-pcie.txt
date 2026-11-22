@@ -1,0 +1,25 @@
+[   27.127336]: pcie: steps 1 to 5 in 3 s
+[   30.128565]: pcie: 1: reads: the PHYs' isolation (PMU), the pins as the bootloader left them
+[   30.128736]: pcie: 1: PMU: channel 1's PHY control 0x000000c0, the second PHY's 0x000000c0 (bit 0: 1 = isolation off)
+[   30.128895]: pcie: 1: pins: gph3 CON 0x00000000 DAT 0x02 PUD 0x00111111 DRV 0x00000000; gpa5 CON 0x00000000 DAT 0x00 PUD 0x11111111
+[   30.129006]: pcie: 2: writes: the pins (PERST# low, CLKREQ#, WL_DEV_WAKE), then WL_REG_ON high: the chip's power
+[   30.335097]: pcie: 2: after: gph3 CON 0x00010021 DAT 0x10 PUD 0x00101131 DRV 0x00000000; gpa5 CON 0x00000000 DAT 0x00 PUD 0x11111111
+[   30.335226]: pcie: 3: writes: the PHY (isolation off, powered down and up, zuma's settings for a Broadcom chip)
+[   30.335389]: pcie: 3: isolation off (PMU 0x00000001); ELBI: LTSSM 0x00, soft reset 0xf, D state 0; root port a5a5144d
+[   30.335945]: pcie: 3: external PLL locked after 10 us
+[   30.336254]: pcie: 3: PLL locked after 50 us
+[   30.336313]: pcie: 3: CDR locked after 10 us
+[   30.343219]: pcie: 3: offset calibration done after 3630 us
+[   30.345295]: pcie: 4: writes: the root complex, PERST# let go, link training
+[   30.364714]: pcie: 4: try 1: D state 0, LTSSM 0x00 before training
+[   30.367376]: pcie: 4: try 1: L0 after ~450 us
+[   30.372695]: pcie: 4: link up: Gen2 x1 (link status 0xb0120000)
+[   30.374553]: pcie: 5: reads: the chip's configuration space, its BARs placed, its identity through BAR0
+[   30.376483]: pcie: 5: the chip: 14e4:4444, class/rev 0x02800003, header 0x00, status/command 0x00100000
+[   30.378289]: pcie: 5: BAR0: 64 KB, 64-bit
+[   30.380087]: pcie: 5: BAR2: 4096 KB, 64-bit
+[   30.381900]: pcie: 5: BAR4: 1024 KB, 64-bit, prefetchable
+[   30.383746]: pcie: 5: BARs 0x0000000060200004 0x0000000060400004 0x000000006080000c, command 0x0006
+[   30.385478]: pcie: 5: BAR0 window 0x18000000
+[   30.387294]: pcie: 5: chipcommon: chip 0x4398, revision 3, package 0, 0 cores, interconnect type 6 (id 0x60034398)
+[   30.389033]: pcie: 5: the BCM4398 answers
