@@ -72,7 +72,11 @@ USB working. The two phones share the SoC and most of the board. The table says 
   U-Boot powers the touch chip through ACPM (`zuma touch`: LDO4M at 3.3 V, LDO25M), the 8a's driver finds a GT9916
   (`"BERLIN"`, firmware `9916R`) with no change and tracks a swipe at 240 reports a second; power and both volume keys
   pressed and released.
-- The other drivers, one at a time: `display_probe=1` (the panel is bigsurf here), `pcie=5` (the Wi-Fi link: it should
+- **The display, 2026-11-22** ([boot-info/first-boot-2026-11-22-display-bigsurf-120hz.txt](boot-info/first-boot-2026-11-22-display-bigsurf-120hz.txt)):
+  the panel is google-bigsurf (BOE), not shoreline; the driver now has both (`panel_name=`, bigsurf by default) and takes
+  the bootloader's framebuffer over (3 buffers, flipped by DPP0 between frames); bigsurf's own rate commands move it from
+  the bootloader's 60 Hz to 120 Hz (60 frames in 0.5 s). Brightness and display on/off need iOS asking (a later run).
+- The other drivers, one at a time: `pcie=5` (the Wi-Fi link: it should
   say chip 0x4398), `haptic=1`, `amp=1`, `thermal=1`.
 - The panel is **google-bigsurf** on this phone (product id 0x84a050, the bootloader's log), not shoreline: the display
   driver's rate and brightness commands are to be checked against panel-google-bigsurf.c.

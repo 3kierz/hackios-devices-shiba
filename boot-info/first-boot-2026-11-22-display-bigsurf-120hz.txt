@@ -1,0 +1,11 @@
+[oosexgang] panel: google-bigsurf.84a050 (the kernel's panel_name=bigsurf)
+[   29.236994]: hakios-kernel: 29 drivers built in (.config): guard virtio_sound bt_host virtio_input virtio_net battery ufs virtio_blk wifi_station akita_aoc akita_amp akita_bt akita_torch akita_display akita_mali akita_haptic akita_keys akita_touch akita_modem akita_battery akita_acpm akita_thermal akita_dvfs akita_rtc akita_power akita_mct akita_trusty akita_usb akita_wifi
+[   29.298002]: akita_display: the panel is google-bigsurf (panel_name=)
+[   29.298168]: akita_display: error flags as found: DPP0 RDMA_IRQ 0x10000, DSIM0 INTSRC 0x61000000, DECON0 INT_PEND_EXTRA 0
+[   29.832097]: akita_display: 30 frame dones in 0.5 s (60 Hz); DPP0 read 29 frames, 6893 us each, the gap from frame done to the next read 9738-9754 us (30 seen): OP_STATUS trusted
+[   29.832293]: akita_display: the panel to 120 Hz (it refreshes at 60 now); DSIM0 CMD_CONFIG 0 FIFOCTRL 0x9507
+[   30.553066]: akita_display: 60 frame dones in 0.5 s (120 Hz); DPP0 read 59 frames, 6894 us each, the gap from frame done to the next read 1417-1427 us (60 seen): OP_STATUS trusted
+[   30.553222]: akita_display: the panel's commands sent; it refreshes at 120 Hz now (FIFOCTRL 0x9507)
+[   30.553298]: akita_display: the panel refreshes at 120 Hz (counted 120)
+[   30.553431]: akita_display: 3 buffers from 0xfac00000, flipped by DPP0 between the panel's frames (RDMA_SRC_WIDTH 1080)
+[   30.554019]: MiniIOMobileFramebuffer: IOMFBDisplayRefresh: 120 Hz (the panel: 120), an interval of 35791394 (2^-32 s), 204799 ticks
