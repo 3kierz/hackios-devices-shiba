@@ -14,11 +14,13 @@
  *                   slowly as it can count, a net for a hang (about 2.5 minutes on the 8a). The HakiOS loader knows it
  *                   (xnuloader/loader.c: wdt_samsung) and the kernel feeds it (/chosen/watchdog-samsung).
  *
- *   pstore          a console device writing into the pmsg zone of Android's ramoops region ($hakios_pstore: address
- *                   and size; ramoops_mem@fd3ff000 on zuma: console 2 MiB, then pmsg 2 MiB), in the layout of Linux's
- *                   persistent RAM (fs/pstore/ram_core.c: "DBGC", start, size, then the text, no ECC). After the
- *                   restart, as root in Android: cat /sys/fs/pstore/pmsg-ramoops-0. What U-Boot printed before the
- *                   device was there is copied in from the console record (CONFIG_CONSOLE_RECORD).
+ *   pstore          a console device writing into a zone of Android's ramoops region ($hakios_pstore: address and
+ *                   size; ramoops_mem@fd3ff000 on zuma: console 2 MiB, then pmsg 2 MiB), in the layout of Linux's
+ *                   persistent RAM (fs/pstore/ram_core.c: "DBGC", start, size, then the text, no ECC), appended to the
+ *                   log already there as Linux's console would. On zuma the console zone: Google's bootloader keeps
+ *                   its own log there and, at the next start, what the previous kernel wrote (the pmsg zone came back
+ *                   empty on the Pixel 8). After the restart, as root in Android: cat /sys/fs/pstore/console-ramoops-0.
+ *                   What U-Boot printed before the device was there is copied in from the console record.
  *
  * Samsung watchdog registers (Linux drivers/watchdog/s3c2410_wdt.c): WTCON +0 (bits 15:8 the prescaler, 5 enable,
  * 4:3 the clock divider 16/32/64/128, 2 interrupt, 0 reset), WTDAT +4 (the reload value), WTCNT +8 (the count).
@@ -112,7 +114,7 @@ struct pram_buffer {
 };
 
 static struct pram_buffer *pram;
-static u32 pram_cap;
+static u32 pram_cap, pram_found;
 
 static void pram_flush(ulong lo, ulong hi)
 {
@@ -179,10 +181,27 @@ static int pstore_init(void)
 	}
 	pram = (struct pram_buffer *)addr;
 	pram_cap = size - sizeof(*pram);
-	pram->sig = PRAM_SIG;
-	pram->start = 0;
-	pram->size = 0;
-	pram_flush(addr, addr + sizeof(*pram));
+	/*
+	 * A log already there (the console zone: Google's bootloader writes its own log into it, as Linux's console does,
+	 * and keeps what the previous kernel left at the next start) is written on, as Linux would: so the next bootloader
+	 * keeps HakiOS's lines where the kernel's would be. Anything else is started afresh.
+	 */
+	invalidate_dcache_range(ALIGN_DOWN(addr, ARCH_DMA_MINALIGN), ALIGN(addr + sizeof(*pram), ARCH_DMA_MINALIGN));
+	if (pram->sig == PRAM_SIG && pram->size <= pram_cap && pram->start <= pram_cap) {
+		pram_found = pram->size;
+		if (pram->start == pram_cap)
+			pram->start = 0;
+	} else {
+		pram->sig = PRAM_SIG;
+		pram->start = 0;
+		pram->size = 0;
+		pram_flush(addr, addr + sizeof(*pram));
+	}
+	{
+		static const char mark[] = "\n\n===== HakiOS U-Boot on zuma: from here, U-Boot, the loader and the kernel =====\n";
+
+		pram_write(mark, sizeof(mark) - 1);
+	}
 
 #if CONFIG_IS_ENABLED(CONSOLE_RECORD)
 	/* what was printed before this device existed: the console record, which holds it all (not consumed) */
@@ -207,7 +226,8 @@ static int do_zuma_pstore(struct cmd_tbl *cmdtp, int flag, int argc, char *const
 		printf("pstore: not set up ($hakios_pstore)\n");
 		return CMD_RET_FAILURE;
 	}
-	printf("pstore: %u of %u bytes at %#lx, the next at %u\n", pram->size, pram_cap, (ulong)pram, pram->start);
+	printf("pstore: %u of %u bytes at %#lx, the next at %u (%u there before U-Boot)\n", pram->size, pram_cap, (ulong)pram,
+	       pram->start, pram_found);
 	return CMD_RET_SUCCESS;
 }
 

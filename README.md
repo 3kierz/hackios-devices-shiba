@@ -81,7 +81,7 @@ repository brings its own, built from public sources:
 - `u-boot/zuma.patch` and `u-boot/files/board/samsung/exynos-mobile/hakios_zuma.c` (`CONFIG_HAKIOS_ZUMA`): U-Boot's load
   address noted for `hakios load`, U-Boot run in the highest RAM bank (clear of every carve-out), `zuma wdt` (both
   cluster watchdogs stopped, cl0 re-armed as a slow net the kernel feeds), and a `pstore` console in Android's ramoops
-  pmsg zone (read it back in Android as root: `cat /sys/fs/pstore/pmsg-ramoops-0`).
+  console zone, after the bootloader's own log, which the next bootloader keeps (read it back with `devices/shiba/pull-log.sh`).
 
 Not in it yet: USB, the touch screen's power, UFS and the slot marking the 8a's U-Boot had. None is needed for the
 first boot, which runs `hello` from RAM.
@@ -115,7 +115,7 @@ fastboot boot build/shiba/hakios-shiba.img           # from Windows' platform-to
 | `[oosexgang] hakios: payload of ...`, `loader of ...` | `the boot image has no ramdisk` or `nothing known at`: cmd/hakios.c's container search |
 | `== XNULOADER v3 ==`, `CurrentEL=2`, `platform akita` | `platform qemu-virt`: U-Boot's tree did not reach the loader |
 | `jumping to ...`, then the kernel's lines | a reset or a hang right after `jumping`: the drop to EL1 |
-| `Hello from user space on Darwin!`, then a restart into Android | the kernel's log is in pstore: `cat /sys/fs/pstore/pmsg-ramoops-0` as root in Android |
+| `Hello from user space on Darwin!`, then a restart into Android | the run's log is in pstore: `devices/shiba/pull-log.sh` (root in Android) |
 
 `platform akita` is the loader's name for every zuma phone, so it is the expected line on a Pixel 8 too.
 
