@@ -1,0 +1,14 @@
+cmdline: debug=0x8 rd=md0 hakios_kver=2.3.4-hakios-darwin22.5-zuma-g4914fab2-dirty -v cpus=9 thermal=1 thermal_log=10 dvfs=0 hello_wait=40 panel_name=bigsurf touchscreen=0 buttons=0 fuelgauge=0 usbmux=0 mali_keep=0 metal=0 display_flip=0 metal_all=0 pcie=0 aoc=0 amp=0 speaker=0 aocrec=0 cpuidle=0 hakios_arm64e=1
+kern.hakios.thermal_sensors=
+kern.hakios.thermal_max_mc=46000
+kern.hakios.thermal_hottest=BIG
+kern.hakios.thermal_max_mc=45000
+kern.hakios.thermal_max_mc=44000
+kern.hakios.thermal_hottest=MID
+[   36.724152]: akita thermal: the SoC's 7 sensors through ACPM every 2000 ms; the phone powered off at 100 C
+[   36.932841]: akita thermal: the board's 8 thermistors on the sub-PMIC's meter (CTRL3 was 0x00)
+[   36.935027]: akita thermal: BIG=46 MID=46 LITTLE=45 G3D=45 ISP=44 TPU=44 AUR=44 (hottest BIG 46 C); skin 36.0 C (severity 0), battery -273 C; neutral=37 quiet=34 charge=39 usb_pwr=35 cam=36 disp=36 north=36 soc=39
+[   46.949822]: akita thermal: BIG=46 MID=46 LITTLE=45 G3D=44 ISP=44 TPU=44 AUR=44 (hottest BIG 46 C); skin 36.0 C (severity 0), battery -273 C; neutral=37 quiet=34 charge=39 usb_pwr=35 cam=36 disp=36 north=36 soc=39
+[   56.968347]: akita thermal: BIG=45 MID=45 LITTLE=44 G3D=44 ISP=44 TPU=43 AUR=43 (hottest BIG 45 C); skin 36.0 C (severity 0), battery -273 C; neutral=37 quiet=34 charge=39 usb_pwr=35 cam=36 disp=36 north=36 soc=39
+[   66.986691]: akita thermal: BIG=44 MID=44 LITTLE=44 G3D=43 ISP=43 TPU=42 AUR=43 (hottest BIG 44 C); skin 35.8 C (severity 0), battery -273 C; neutral=37 quiet=34 charge=39 usb_pwr=35 cam=36 disp=36 north=36 soc=39
+Boot args: debug=0x8 rd=md0 hakios_kver=2.3.4-hakios-darwin22.5-zuma-g4914fab2-dirty -v cpus=9 thermal=1 thermal_log=10 dvfs=0 hello_wait=40 panel_name=bigsurf touchscreen=0 buttons=0 fuelgauge=0 usbmux=0 mali_keep=0 metal=0 display_flip=0 metal_all=0 pcie=0 aoc=0 amp=0 speaker=0 aocrec=0 cpuidle=0 hakios_arm64e=1 metal_plugin=../../../redwood/lib/HakiosMetal root_apfs=ufs_darwin var_hfs=ufs_darwin_data pcie_delay=10 amp_gain=17 fb_beat=0

@@ -103,8 +103,12 @@ USB working. The two phones share the SoC and most of the board. The table says 
   the L2 on, the phone's mali_csffw-r54p2.bin loaded (7 sections, 12 page tables), **the MCU running the firmware**
   (interface 2.8.0, 8 groups), a ping answered, the shader cores allowed; a command stream group started; **the first job
   ran** (both words stored) and **a compute shader ran on the shader cores** (0x600df00d); the GPU reset again.
-- The other drivers, one at a time: ~~`pcie=5`~~ ~~`haptic=1`~~ ~~`amp=1`~~ ~~`aoc=3`~~ ~~`mali=9`~~ (the Wi-Fi link: it should
-  say chip 0x4398), `thermal=1`.
+- **Thermal, 2026-11-23** ([boot-info/first-boot-2026-11-23-thermal.txt](boot-info/first-boot-2026-11-23-thermal.txt)): `thermal=1`:
+  the SoC's sensors through ACPM (BIG 46 C cooling to 44, idle), the sub-PMIC's meter switched on and the eight board
+  thermistors read in the Pixel 8's order: charge and soc warmest (39), neutral next, quiet and disp coolest (34-36), the
+  same order as Android's own thermal zones read just after; the Pixel 8's VIRTUAL-SKIN 36.0 C, severity 0.
+- The other drivers, one at a time: ~~`pcie=5`~~ ~~`haptic=1`~~ ~~`amp=1`~~ ~~`aoc=3`~~ ~~`mali=9`~~ ~~`thermal=1`~~ (the Wi-Fi link: it should
+  say chip 0x4398), 
 - The panel is **google-bigsurf** on this phone (product id 0x84a050, the bootloader's log), not shoreline: the display
   driver's rate and brightness commands are to be checked against panel-google-bigsurf.c.
 - USB, touch power and UFS in U-Boot, which the 8a's unpublished U-Boot had.
