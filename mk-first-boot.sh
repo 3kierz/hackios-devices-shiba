@@ -30,10 +30,13 @@ xnuloader/build.sh >/dev/null
 python3 tools/hakios-config.py check >/dev/null
 
 # the configuration's arguments, or FIRST_ARGS=... instead (FIRST_ARGS="cpus=1": one core, as the 8a's first run)
+# hello built from source (make hello: hello_wait= and the drivers' sysctls) when there is one, else the prebuilt one
+hello=userland/hello; [ -f "$hello" ] || hello=prebuilt/userland/hello
+echo "mk-first-boot.sh: user space: $hello"
 args=${FIRST_ARGS-$(python3 tools/hakios-config.py args)}
 echo "mk-first-boot.sh: kernel $(strings hakios-kernel | grep -m1 'Darwin Kernel Version' | cut -c1-90)"
 echo "mk-first-boot.sh: arguments: -v $args"
-xnuloader/mkpayload.py -o "$out/payload.bin" kernel=hakios-kernel ramdisk=prebuilt/userland/hello --cmdline "-v $args"
+xnuloader/mkpayload.py -o "$out/payload.bin" kernel=hakios-kernel ramdisk="$hello" --cmdline "-v $args"
 
 [ -d u-boot ] || uefi/u-boot/apply.sh
 cp -r "$here/u-boot/files/." u-boot/          # this device's U-Boot files, as apply.sh does at the start

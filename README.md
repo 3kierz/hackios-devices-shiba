@@ -107,7 +107,10 @@ ln -s ~/theos/toolchain/linux/iphone/bin/dsymutil xnu-deps/host/bin/dsymutil   #
 ln -s /usr/bin/python3 xnu-deps/host/bin/python                                # the lldb macros run `python`
 ```
 
-Exit status 2 with `make-kernel: built: hakios-kernel` is the kext symbol-set checks, which fail on this configuration. The kernel: `make kernel` (theos with `sdks/iPhoneOS16.5.sdk`), or, for this
+Exit status 2 with `make-kernel: built: hakios-kernel` is the kext symbol-set checks, which fail on this configuration.
+
+`hello` from source (`make hello SHELL=/bin/bash`: `xnu-env.sh` wants bash) is what `mk-first-boot.sh` takes when it is
+there; the prebuilt one predates `hello_wait=N`, which keeps a test run up N seconds. The kernel: `make kernel` (theos with `sdks/iPhoneOS16.5.sdk`), or, for this
 first run only, `cp prebuilt/hakios-kernel hakios-kernel` (older, and without the zuma drivers, which this run does not use).
 
 ```sh
