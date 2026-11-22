@@ -68,8 +68,12 @@ USB working. The two phones share the SoC and most of the board. The table says 
   on cpu 5 ([boot-info/first-boot-2026-11-22-nine-cores.txt](boot-info/first-boot-2026-11-22-nine-cores.txt)). The four
   A510s (cores 0-3 by MPIDR; the kernel's 1-3) come later by design on zuma (28 s on the 8a); `hello` ended first. The
   prebuilt kernel of 2026-10-25 hangs after the jump with `cpus=9` (older than the 8a's eight-core work).
-- The drivers, one at a time, as the 8a's port did: `touchscreen=1`, `buttons=1`, `display_probe=1`, `pcie=5` (the Wi-Fi
-  link: it should say chip 0x4398), `haptic=1`, `amp=1`, `thermal=1`.
+- **Touch and buttons work, 2026-11-22** ([boot-info/first-boot-2026-11-22-touch-buttons.txt](boot-info/first-boot-2026-11-22-touch-buttons.txt)):
+  U-Boot powers the touch chip through ACPM (`zuma touch`: LDO4M at 3.3 V, LDO25M), the 8a's driver finds a GT9916
+  (`"BERLIN"`, firmware `9916R`) with no change and tracks a swipe at 240 reports a second; power and both volume keys
+  pressed and released.
+- The other drivers, one at a time: `display_probe=1` (the panel is bigsurf here), `pcie=5` (the Wi-Fi link: it should
+  say chip 0x4398), `haptic=1`, `amp=1`, `thermal=1`.
 - The panel is **google-bigsurf** on this phone (product id 0x84a050, the bootloader's log), not shoreline: the display
   driver's rate and brightness commands are to be checked against panel-google-bigsurf.c.
 - USB, touch power and UFS in U-Boot, which the 8a's unpublished U-Boot had.

@@ -1,0 +1,68 @@
+[oosexgang] touch: before: LDO4M 0x3c, LDO25M 0x2c, reset pin CON 0x22220022 DAT 0xab
+[oosexgang] touch: powered, out of reset: LDO4M 0xbc (AVDD), LDO25M 0xac (DVDD), reset pin DAT 0xab
+Hello from user space on Darwin!
+[   26.292784]: akita keys: power: bank 0x80 pin 0, function 0x0, level 1
+[   26.292905]: akita keys: volume down: bank 0x80 pin 1, function 0x0, level 1
+[   26.293023]: akita keys: volume up: bank 0xa0 pin 2, function 0x0, level 1
+[   27.294073]: akita touch: chip "BERLIN", firmware "9916R" 1f.00.00.7f
+[   27.294624]: akita touch: report at 0x10308, 14 bytes a finger, coordinates up to 1080 x 2400
+[   27.299640]: akita touch: as Android sets the chip: 240 reports a second taken, every scan reported taken
+[   27.299750]: akita touch: ready; the interrupt line is looked at every 4000 us
+[   27.304749]: akita touch: finger 0 at 409, 1675 (of 1080 x 2400)
+[   27.306183]: akita touch: finger 0 at 419, 1675 (of 1080 x 2400)
+[   27.311451]: akita touch: finger 0 at 441, 1676 (of 1080 x 2400)
+[   27.315469]: akita touch: finger 0 at 468, 1677 (of 1080 x 2400)
+[   27.319467]: akita touch: finger 0 at 493, 1677 (of 1080 x 2400)
+[   27.327338]: akita touch: finger 0 at 514, 1676 (of 1080 x 2400)
+[   27.330923]: akita touch: finger 0 at 530, 1675 (of 1080 x 2400)
+[   27.335817]: akita touch: finger 0 at 544, 1673 (of 1080 x 2400)
+[   27.339363]: akita touch: finger 0 at 557, 1671 (of 1080 x 2400)
+[   27.344227]: akita touch: finger 0 at 570, 1669 (of 1080 x 2400)
+[   27.347686]: akita touch: finger 0 at 583, 1667 (of 1080 x 2400)
+[   27.352469]: akita touch: finger 0 at 594, 1666 (of 1080 x 2400)
+[   27.355930]: akita touch: finger 0 at 606, 1664 (of 1080 x 2400)
+[   27.360649]: akita touch: finger 0 at 617, 1663 (of 1080 x 2400)
+[   27.365370]: akita touch: finger 0 at 628, 1662 (of 1080 x 2400)
+[   27.368775]: akita touch: finger 0 at 639, 1662 (of 1080 x 2400)
+[   27.373495]: akita touch: finger 0 at 649, 1661 (of 1080 x 2400)
+[   27.376793]: akita touch: finger 0 at 659, 1660 (of 1080 x 2400)
+[   27.381376]: akita touch: finger 0 at 668, 1660 (of 1080 x 2400)
+[   27.385986]: akita touch: finger 0 at 678, 1660 (of 1080 x 2400)
+[   27.390581]: akita touch: finger 0 at 688, 1659 (of 1080 x 2400)
+[   27.393845]: akita touch: finger 0 at 698, 1659 (of 1080 x 2400)
+[   27.398387]: akita touch: finger 0 at 709, 1658 (of 1080 x 2400)
+[   27.403003]: akita touch: finger 0 at 720, 1658 (of 1080 x 2400)
+[   27.407562]: akita touch: finger 0 at 729, 1657 (of 1080 x 2400)
+[   27.412062]: akita touch: finger 0 at 740, 1656 (of 1080 x 2400)
+[   27.415292]: akita touch: finger 0 at 750, 1655 (of 1080 x 2400)
+[   27.419824]: akita touch: finger 0 at 760, 1654 (of 1080 x 2400)
+[   27.424366]: akita touch: finger 0 at 771, 1653 (of 1080 x 2400)
+[   27.427595]: akita touch: finger 0 at 780, 1651 (of 1080 x 2400)
+[   27.432040]: akita touch: finger 0 at 792, 1650 (of 1080 x 2400)
+[   27.436607]: akita touch: finger 0 at 801, 1648 (of 1080 x 2400)
+[   27.441134]: akita touch: finger 0 at 810, 1647 (of 1080 x 2400)
+[   27.445558]: akita touch: finger 0 at 819, 1645 (of 1080 x 2400)
+[   27.448715]: akita touch: finger 0 at 829, 1644 (of 1080 x 2400)
+[   27.453233]: akita touch: finger 0 at 838, 1642 (of 1080 x 2400)
+[   27.457721]: akita touch: finger 0 at 847, 1641 (of 1080 x 2400)
+[   27.462326]: akita touch: finger 0 at 855, 1640 (of 1080 x 2400)
+[   27.465532]: akita touch: finger 0 at 863, 1638 (of 1080 x 2400)
+[   27.470035]: akita touch: finger 0 at 869, 1637 (of 1080 x 2400)
+[   31.947874]: akita keys: volume down pressed
+[   32.083029]: akita keys: volume down released
+[   32.434218]: akita keys: volume up pressed
+[   32.575831]: akita keys: volume up released
+[   32.857127]: akita keys: power pressed
+[   33.009590]: akita keys: power released
+[   36.962655]: akita touch: timing: the loop's wakes with a finger down (ms): <=1.5 2762, <=2.5 0, <=4.5 35, <=9 11, <=17 0, longer 0; a read of the chip: 122 us on average, 3888 at most (4095 reads)
+[   48.686981]: akita touch: timing: the loop's wakes with a finger down (ms): <=1.5 4925, <=2.5 0, <=4.5 35, <=9 19, <=17 0, longer 0; a read of the chip: 113 us on average, 3938 at most (8191 reads)
+[   58.649593]: akita keys: power pressed
+[   58.843584]: akita keys: power released
+[   59.554929]: akita keys: volume up pressed
+[   59.731428]: akita keys: volume up released
+[   60.564460]: akita keys: volume down pressed
+[   61.188292]: akita keys: volume down released
+[   65.106190]: akita touch: timing: the loop's wakes with a finger down (ms): <=1.5 5696, <=2.5 0, <=4.5 35, <=9 25, <=17 0, longer 0; a read of the chip: 110 us on average, 3938 at most (12287 reads)
+[   79.255688]: akita touch: timing: the loop's wakes with a finger down (ms): <=1.5 7142, <=2.5 0, <=4.5 35, <=9 32, <=17 0, longer 0; a read of the chip: 108 us on average, 3938 at most (16383 reads)
+[   87.306081]: akita touch: so far 1547 reports in 18115 looks (0 bad), 1514 finger positions, the last at 863, 1904; interrupt line high; between reports with a finger down (ms): <=1 0, <=2 8, <=4 1114, <=6 352, <=8 8, <=10 0, <=17 0, longer 0; 0 positions repeated while the chip was silent
+[   98.303894]: akita touch: timing: the loop's wakes with a finger down (ms): <=1.5 7142, <=2.5 0, <=4.5 35, <=9 32, <=17 0, longer 0; a read of the chip: 107 us on average, 3938 at most (20479 reads)
