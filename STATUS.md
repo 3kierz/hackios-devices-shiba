@@ -63,8 +63,9 @@ USB working. The two phones share the SoC and most of the board. The table says 
 
 ## Next
 
-- All nine cores (`cpus=9`: the loader's EL2 trampoline), then a kernel built from source (`make kernel`: theos and the
-  iPhoneOS 16.5 SDK) with the zuma drivers in.
+- All nine cores: with `cpus=9` the prebuilt kernel (2026-10-25) hangs right after the loader's `jumping to ...` (no
+  `kernel returned`; tried 2026-11-22), as expected of a kernel older than the 8a port's eight-core work (2026-11-01). Next:
+  a kernel built from source (`make kernel`: theos and the iPhoneOS 16.5 SDK), which also brings the zuma drivers in.
 - The panel is **google-bigsurf** on this phone (product id 0x84a050, the bootloader's log), not shoreline: the display
   driver's rate and brightness commands are to be checked against panel-google-bigsurf.c.
 - USB, touch power and UFS in U-Boot, which the 8a's unpublished U-Boot had.
