@@ -47,7 +47,8 @@ USB working. The two phones share the SoC and most of the board. The table says 
 - the SoC's block addresses (`soc/zuma.addrs`): identical;
 - the RAM (4 x 2 GiB at the same places) and the 41 fixed `/reserved-memory` regions: identical except
   pkvm_guest_firmware (0xd0000, not 0x100000; `zuma-shiba.dts` now has the Pixel 8's);
-- the boot image: header version 4, LZ4 kernel, no ramdisk in boot, vendor_boot without a tree, as on the 8a;
+- the boot image: header version 4, LZ4 kernel, no ramdisk in boot, vendor_boot without a tree, as on the 8a; boot_a is 0x4000000
+  (`fastboot getvar partition-size:boot_a`), the size the AVB footer is made for;
 - the parts: google-shoreline panel, `goodix,brl-d` touch with LDO4M at 3.3 V, two CS35L41s on spi@111C0000, the
   CS40L26A at 11 V / 2.5 A with f0-default 0x244000 and redc-default 0x68000, MAX77759 + PCA9468, BCM4775 on
   spi@111E0000, Wi-Fi on pcie@13120000 (max-link-speed 3; trained to Gen2 here). All as this port assumes.
@@ -56,6 +57,5 @@ USB working. The two phones share the SoC and most of the board. The table says 
 
 - The framebuffer address `0xfac00000` and DECON0's `TRIG_CON` value `0x3070` (U-Boot's preboot prints which it found;
   the bootloader's log, which says it, needs root to read).
-- `boot_a`'s size for the AVB footer (`fastboot getvar partition-size:boot_a`; 0x4000000 assumed).
 - `touchscreen=1`: the chip's version block should read "BERLIN" and the Berlin-D's id.
 - `pcie=5`: `chipcommon: chip 0x4398`.
