@@ -43,6 +43,9 @@ else
 	disks="ramdisk=$hello"
 fi
 args=${FIRST_ARGS-$(python3 tools/hakios-config.py args)}
+# hakios_arm64e=1: the kernel execs arm64e programs only with it, and userland/build.sh builds hello for the unpacked user
+# space's architecture (arm64e for 16.6.1 d16ap); harmless for an arm64 one (the 8a's bootrun.sh always gives it)
+case "$args" in *hakios_arm64e=*) ;; *) args="$args hakios_arm64e=1";; esac
 echo "mk-first-boot.sh: kernel $(strings hakios-kernel | grep -m1 'Darwin Kernel Version' | cut -c1-90)"
 echo "mk-first-boot.sh: arguments: -v $args"
 xnuloader/mkpayload.py -o "$out/payload.bin" kernel=hakios-kernel $disks --cmdline "-v $args"
