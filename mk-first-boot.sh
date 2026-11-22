@@ -38,6 +38,13 @@ xnuloader/mkpayload.py -o "$out/payload.bin" kernel=hakios-kernel ramdisk=prebui
 [ -d u-boot ] || uefi/u-boot/apply.sh
 cp -r "$here/u-boot/files/." u-boot/          # this device's U-Boot files, as apply.sh does at the start
 cp uefi/u-boot/files/cmd/hakios.c u-boot/cmd/hakios.c
+# UBOOT_ENV="name=value" lines (one per line) added to the environment for one experiment, after the device's own (the
+# later of two settings is the one U-Boot keeps); OUT=name.img for the image's name
+if [ -n "${UBOOT_ENV:-}" ]; then
+	printf '\n/* added by mk-first-boot.sh for this build (UBOOT_ENV) */\n%s\n' "$UBOOT_ENV" \
+		>> u-boot/board/samsung/exynos-mobile/hakios-shiba.env
+	echo "mk-first-boot.sh: U-Boot environment added:"; echo "$UBOOT_ENV" | sed 's/^/  /'
+fi
 # the zuma pieces in the generic Exynos phone board (hakios_zuma.c built, U-Boot's load address noted): once
 if git -C u-boot apply --check "$here/u-boot/zuma.patch" 2>/dev/null; then
 	git -C u-boot apply "$here/u-boot/zuma.patch"
@@ -54,9 +61,9 @@ if [ ! -f "$here/prebuilt/device-tree.dtb" ]; then
 	[ -f "$here/boot-info/fdt.dtb" ] || { echo "mk-first-boot.sh: no boot-info/fdt.dtb: run devices/shiba/pull-boot-info.sh first" >&2; exit 1; }
 	cp "$here/boot-info/fdt.dtb" "$here/prebuilt/device-tree.dtb"
 fi
-python3 tools/mkubootimg.py -d shiba -p "$out/payload.bin" -o "$out/hakios-shiba.img"
+python3 tools/mkubootimg.py -d shiba -p "$out/payload.bin" -o "$out/${OUT:-hakios-shiba.img}"
 echo
-echo "mk-first-boot.sh: $out/hakios-shiba.img. On a machine where fastboot reaches the phone (Windows' platform-tools):"
+echo "mk-first-boot.sh: $out/${OUT:-hakios-shiba.img}. On a machine where fastboot reaches the phone (Windows' platform-tools):"
 echo "  adb reboot bootloader"
-echo "  fastboot boot $out/hakios-shiba.img"
+echo "  fastboot boot $out/${OUT:-hakios-shiba.img}"
 echo "Nothing is flashed: a restart gives the phone back to Android."
