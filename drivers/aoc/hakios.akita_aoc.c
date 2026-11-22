@@ -2355,7 +2355,8 @@ aoc_boot_image(const uint8_t *f, uint64_t size)
 	uint32_t chip_rev = (((r10 >> 20) & 0xf) << 4) | ((r10 >> 16) & 0xf);
 	uint32_t top = AOC_DRAM_SIZE, sensor = top - (4u << 20), playback = sensor - 0x4000, capture = playback - 0x10000;
 	const uint32_t kv[][2] = {
-		{ 0x1001, 0x40402 }, { 0x1002, 0x10000 },               /* the board (aoc-board-id, -rev: "AK3") */
+		/* the board (aoc-board-id, -rev): the Pixel 8's (shiba MP: 0x40302, board config "SB3"; the 8a's is 0x40402, "AK3") */
+		{ 0x1001, 0x40302 }, { 0x1002, 0x10000 },
 		{ 0x1003, 0 },                                          /* SRAM repaired */
 		{ 0x1005, (uint32_t)AOC_DRAM_PHYS }, { 0x1006, AOC_DRAM_SIZE },
 		{ 0x1007, AOC_BINARY_DRAM_BASE + sensor }, { 0x1008, 4u << 20 },
@@ -2370,7 +2371,8 @@ aoc_boot_image(const uint8_t *f, uint64_t size)
 		{ 0x1009, 0 }, { 0x100A, aoc_mm_on ? 0u : 1u }, { 0x100B, 0 }, { 0x1010, 0 },     /* VNOM, monitor mode off, UART, ultrasonic */
 		{ 0x1011, (uint32_t)mach_absolute_time() },             /* a seed */
 		/* (the chip's revision as Android passes it on this phone, 0x11: read from CHIPID here it came out 0x1) */
-		{ 0x1012, chip_rev == 0x1 ? 0x11u : chip_rev }, { 0x1013, chip_type }, { 0x1014, 1 }, { 0x1015, aoc_mm_on ? 0u : 1u },   /* the chip, gnss-type 1, VoLTE MIF */
+		/* gnss-type: the Pixel 8's tree has none (Broadcom's BCM4775), so Linux passes 0; the 8a's says 1 (Samsung's) */
+		{ 0x1012, chip_rev == 0x1 ? 0x11u : chip_rev }, { 0x1013, chip_type }, { 0x1014, 0 }, { 0x1015, aoc_mm_on ? 0u : 1u },   /* the chip, gnss-type, VoLTE MIF */
 		{ 0x1016, 0x9865000 }, { 0x1017, 0 },                   /* the SoC's product id, the Wi-Fi chip (as Android) */
 	};
 	volatile uint32_t *p = (volatile uint32_t *)(dram + image_size);
