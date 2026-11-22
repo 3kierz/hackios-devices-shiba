@@ -1,9 +1,9 @@
 #!/bin/bash
 # devices/shiba/pull-log.sh: after a HakiOS run, back in Android (root), the run's log off the phone.
 #
-# HakiOS's U-Boot writes its console -- U-Boot, the loader, and the kernel's log the loader shows at the end -- into the
-# console zone of Android's ramoops region (hakios_zuma.c, $hakios_pstore), after the bootloader's own log. Google's
-# bootloader keeps it at the next start, and Android shows it as /sys/fs/pstore/console-ramoops-0.
+# HakiOS's U-Boot appends its console -- U-Boot, the loader, and the kernel's log the loader shows at the end -- to
+# Google's bootloader's own log buffer (bldr_log_reserved@fd800000, hakios_zuma.c, $hakios_bldrlog), which survives the
+# restart: the next bootloader reports it, and Android shows it as /sys/fs/pstore/console-ramoops-0.
 #
 #   devices/shiba/pull-log.sh              -> boot-info/run-YYYYmmdd-HHMMSS.txt, and the HakiOS part on the screen
 #

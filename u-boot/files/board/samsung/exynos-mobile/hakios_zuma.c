@@ -142,19 +142,77 @@ static void pram_write(const char *s, size_t n)
 	pram_flush((ulong)pram, (ulong)pram->data);
 }
 
+/*
+ * The bootloader's own log buffer (bldr_log_reserved@fd800000 on zuma; $hakios_bldrlog): the one place seen to survive a
+ * restart on the Pixel 8, and the next bootloader reports what it holds in console-ramoops-0 (pstore's zones do not
+ * survive any restart there, not even Android's own). Its layout, read on the phone (zuma bldrlog, 2026-11-22): a header of
+ * four words -- +0 the length of the text, +8 the room for it (0x7fff0) -- and the text from +0x10. HakiOS's lines are
+ * appended as the bootloader's own; when it is full, the rest is dropped.
+ */
+struct bldr_log {
+	u32 len;
+	u32 rsvd0;
+	u32 room;
+	u32 rsvd1;
+	char text[];
+};
+
+static struct bldr_log *bldr;
+static u32 bldr_found, bldr_dropped;
+
+static void bldr_write(const char *s, size_t n)
+{
+	size_t take;
+
+	if (!bldr || !n)
+		return;
+	take = min_t(size_t, n, bldr->room - bldr->len);
+	bldr_dropped += n - take;
+	if (!take)
+		return;
+	memcpy(bldr->text + bldr->len, s, take);
+	pram_flush((ulong)bldr->text + bldr->len, (ulong)bldr->text + bldr->len + take);
+	bldr->len += take;
+	pram_flush((ulong)bldr, (ulong)bldr->text);
+}
+
+static void log_write(const char *s, size_t n)
+{
+	pram_write(s, n);
+	bldr_write(s, n);
+}
+
 static void pstore_putc(struct stdio_dev *dev, const char c)
 {
-	pram_write(&c, 1);
+	log_write(&c, 1);
 }
 
 static void pstore_puts(struct stdio_dev *dev, const char *s)
 {
-	pram_write(s, strlen(s));
+	log_write(s, strlen(s));
 }
 
 static int pstore_start(struct stdio_dev *dev)
 {
-	return pram ? 0 : -ENODEV;
+	return pram || bldr ? 0 : -ENODEV;
+}
+
+/* the bootloader's log buffer at $hakios_bldrlog, if it has the header seen on the phone */
+static void bldr_init(void)
+{
+	const char *where = env_get("hakios_bldrlog");
+	ulong addr = where ? hextoul(where, NULL) : 0;
+	struct bldr_log *b = (struct bldr_log *)addr;
+
+	if (!addr)
+		return;
+	invalidate_dcache_range(ALIGN_DOWN(addr, ARCH_DMA_MINALIGN), ALIGN(addr + sizeof(*b), ARCH_DMA_MINALIGN));
+	if (b->room < 0x1000 || b->room > 0x100000 || b->len > b->room) {
+		printf("[oosexgang] pstore: no bootloader log at %#lx (length %#x, room %#x): not written\n", addr, b->len, b->room);
+		return;
+	}
+	bldr = b;
+	bldr_found = b->len;
 }
 
 /* set up from $hakios_pstore and registered as the console device "pstore", once U-Boot is up (before preboot) */
@@ -168,17 +226,22 @@ static int pstore_init(void)
 		.puts = pstore_puts,
 	};
 	const char *where = env_get("hakios_pstore");
-	ulong addr, size;
+	ulong addr = 0, size = 0;
 	char *end;
 
-	if (!where)
-		return 0;
-	addr = hextoul(where, &end);
-	size = hextoul(end, NULL);
-	if (!addr || size <= sizeof(*pram) + 4096) {
-		printf("[oosexgang] pstore: $hakios_pstore is not an address and a size: %s\n", where);
-		return 0;
+	bldr_init();
+	if (where) {
+		addr = hextoul(where, &end);
+		while (*end == ' ')
+			end++;
+		size = hextoul(end, NULL);
+		if (!addr || size <= sizeof(*pram) + 4096) {
+			printf("[oosexgang] pstore: $hakios_pstore is not an address and a size: %s\n", where);
+			addr = 0;
+		}
 	}
+	if (!addr)
+		goto zone_done;
 	pram = (struct pram_buffer *)addr;
 	pram_cap = size - sizeof(*pram);
 	/*
@@ -197,10 +260,13 @@ static int pstore_init(void)
 		pram->size = 0;
 		pram_flush(addr, addr + sizeof(*pram));
 	}
+zone_done:
+	if (!pram && !bldr)
+		return 0;
 	{
 		static const char mark[] = "\n\n===== HakiOS U-Boot on zuma: from here, U-Boot, the loader and the kernel =====\n";
 
-		pram_write(mark, sizeof(mark) - 1);
+		log_write(mark, sizeof(mark) - 1);
 	}
 
 #if CONFIG_IS_ENABLED(CONSOLE_RECORD)
@@ -211,7 +277,7 @@ static int pstore_init(void)
 		int n;
 
 		while ((n = membuf_getraw(&copy, INT_MAX, true, &data)) > 0)
-			pram_write(data, n);
+			log_write(data, n);
 	}
 #endif
 	if (stdio_register(&dev))
@@ -222,9 +288,12 @@ EVENT_SPY_SIMPLE(EVT_LAST_STAGE_INIT, pstore_init);
 
 static int do_zuma_pstore(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
 {
+	if (bldr)
+		printf("pstore: the bootloader's log at %#lx: %u of %u bytes (%u the bootloader's), %u dropped\n", (ulong)bldr,
+		       bldr->len, bldr->room, bldr_found, bldr_dropped);
 	if (!pram) {
-		printf("pstore: not set up ($hakios_pstore)\n");
-		return CMD_RET_FAILURE;
+		printf("pstore: no ramoops zone ($hakios_pstore)\n");
+		return bldr ? CMD_RET_SUCCESS : CMD_RET_FAILURE;
 	}
 	printf("pstore: %u of %u bytes at %#lx, the next at %u (%u there before U-Boot)\n", pram->size, pram_cap, (ulong)pram,
 	       pram->start, pram_found);
