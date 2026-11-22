@@ -50,6 +50,8 @@ The base kernel's `userland/build.sh` also hard-codes a few paths named after ak
 `../fw-camera-akita`, `../devices/akita/tools/mkcarrierpack.py`). Those are only used for the modem's carrier pack and
 the 8a's camera tuning. Point them at `shiba`, or leave them unused.
 
+For running full iOS (its own partition on the phone), see [INSTALL-PLAN.md](INSTALL-PLAN.md): nothing in it is done yet.
+
 ## Before the first boot
 
 1. **Unlock the bootloader** (Settings > Developer options > OEM unlocking, then `fastboot flashing unlock`). This wipes the phone.
