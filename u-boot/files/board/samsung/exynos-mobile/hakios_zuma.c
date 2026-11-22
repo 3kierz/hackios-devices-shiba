@@ -37,6 +37,9 @@
 #include <asm/cache.h>
 #include <asm/global_data.h>
 #include <asm/io.h>
+#include <asm/system.h>
+#include <linux/delay.h>
+#include <linux/errno.h>
 #include <linux/kernel.h>
 #include <linux/string.h>
 
@@ -300,6 +303,192 @@ static int do_zuma_pstore(struct cmd_tbl *cmdtp, int flag, int argc, char *const
 	return CMD_RET_SUCCESS;
 }
 
+/* ---- ACPM: Google's power firmware on the APM core, as a client (the kernel's hakios.akita_acpm.c, polled) ---- */
+
+#define ACPM_MBOX		0x15110000UL	/* Android's tree: acpm_ipc reg, the AP-APM mailbox */
+#define ACPM_SRAM		0x15700000UL	/* the APM's SRAM */
+#define ACPM_SRAM_SIZE		0x58000UL
+#define ACPM_INITDATA		0xa000		/* initdata-base: the shared memory's head */
+#define MBOX_INTGR1		0x40
+#define SHMEM_CHANS		0x08
+#define SHMEM_NUM_CHANS		0x18
+#define CHAN_RX_REAR		0x10
+#define CHAN_RX_FRONT		0x14
+#define CHAN_RX_BASE		0x18
+#define CHAN_TX_REAR		0x28
+#define CHAN_TX_FRONT		0x2c
+#define CHAN_TX_BASE		0x30
+#define CHAN_QLEN		0x34
+#define CHAN_MLEN		0x38
+#define CHAN_SIZE		0x48
+#define SEQNUM_SHIFT		16
+#define SEQNUM_MASK		(0x3fu << SEQNUM_SHIFT)
+#define ACPM_POLL_US		100000
+#define PMIC_CHANNEL		2		/* the PMICs' requests (S2MPG14 main: bus 0, S2MPG15 sub: bus 1) */
+
+static u32 acpm_rd(ulong off) { return readl(ACPM_SRAM + off); }
+static void acpm_wr(ulong off, u32 v) { writel(v, ACPM_SRAM + off); }
+
+static int acpm_xfer(unsigned int channel, u32 cmd[4])
+{
+	static u32 seqnum;
+	u32 n = acpm_rd(ACPM_INITDATA + SHMEM_NUM_CHANS), table = acpm_rd(ACPM_INITDATA + SHMEM_CHANS);
+	u32 qlen, mlen, front, next, mine;
+	ulong ch, tx_base, rx_base;
+	unsigned int waited;
+
+	if (channel >= n || n > 64 || table + (channel + 1) * CHAN_SIZE > ACPM_SRAM_SIZE)
+		return -EINVAL;
+	ch = table + channel * CHAN_SIZE;
+	qlen = acpm_rd(ch + CHAN_QLEN);
+	mlen = acpm_rd(ch + CHAN_MLEN);
+	if (!qlen || qlen > 1024 || mlen < 16 || mlen > 256)
+		return -EDOM;
+	tx_base = acpm_rd(ch + CHAN_RX_BASE);		/* the APM's rx is our tx */
+	rx_base = acpm_rd(ch + CHAN_TX_BASE);
+	if (tx_base + qlen * mlen > ACPM_SRAM_SIZE || rx_base + qlen * mlen > ACPM_SRAM_SIZE)
+		return -EDOM;
+
+	/* answers nobody read: marked read */
+	acpm_wr(acpm_rd(ch + CHAN_TX_REAR), acpm_rd(acpm_rd(ch + CHAN_TX_FRONT)));
+	seqnum = seqnum % 63 + 1;
+	mine = seqnum;
+	cmd[0] = (cmd[0] & ~SEQNUM_MASK) | (mine << SEQNUM_SHIFT);
+	front = acpm_rd(acpm_rd(ch + CHAN_RX_FRONT)) % qlen;
+	next = (front + 1) % qlen;
+	for (waited = 0; acpm_rd(acpm_rd(ch + CHAN_RX_REAR)) == next; waited += 20) {
+		if (waited > ACPM_POLL_US)
+			return -EBUSY;
+		udelay(20);
+	}
+	for (int i = 0; i < 4; i++)
+		acpm_wr(tx_base + mlen * front + 4 * i, cmd[i]);
+	dsb();
+	acpm_wr(acpm_rd(ch + CHAN_RX_FRONT), next);
+	dsb();
+	writel(1u << channel, ACPM_MBOX + MBOX_INTGR1);
+
+	for (waited = 0;; waited += 20) {
+		u32 rear = acpm_rd(acpm_rd(ch + CHAN_TX_REAR)) % qlen;
+		u32 rfront = acpm_rd(acpm_rd(ch + CHAN_TX_FRONT)) % qlen;
+
+		while (rear != rfront) {
+			ulong m = rx_base + mlen * rear;
+
+			rear = (rear + 1) % qlen;
+			if (((acpm_rd(m) & SEQNUM_MASK) >> SEQNUM_SHIFT) == mine) {
+				for (int i = 0; i < 4; i++)
+					cmd[i] = acpm_rd(m + 4 * i);
+				acpm_wr(acpm_rd(ch + CHAN_TX_REAR), rear);
+				return 0;
+			}
+		}
+		acpm_wr(acpm_rd(ch + CHAN_TX_REAR), rear);
+		if (waited > ACPM_POLL_US)
+			return -ETIMEDOUT;
+		udelay(20);
+	}
+}
+
+/*
+ * One PMIC register through ACPM (Linux's exynos-acpm-pmic.c): cmd[0] the bus (15:12), the type (11:8: 1 the regulators)
+ * and the register; cmd[1] the function (0 read, 1 write), the value (15:8) and the mask (23:16); the answer's status in
+ * cmd[1] 31:24 and a read value in 15:8.
+ */
+static int pmic_access(unsigned int bus, unsigned int type, unsigned int reg, bool write, u8 *value)
+{
+	u32 cmd[4] = { (bus & 0xf) << 12 | (type & 0xf) << 8 | (reg & 0xff),
+		       (write ? 1u : 0u) | (u32)*value << 8 | 0xffu << 16, 0, 0 };
+	int ret = acpm_xfer(PMIC_CHANNEL, cmd);
+
+	if (ret)
+		return ret;
+	if (cmd[1] >> 24)
+		return -EIO;
+	if (!write)
+		*value = (u8)(cmd[1] >> 8);
+	return 0;
+}
+
+/* read, then write (value & mask) over the rest; the register's value after in *after */
+static int pmic_update(unsigned int bus, unsigned int type, unsigned int reg, u8 value, u8 mask, u8 *after)
+{
+	u8 v = 0;
+	int ret = pmic_access(bus, type, reg, false, &v);
+
+	if (ret)
+		return ret;
+	v = (v & ~mask) | (value & mask);
+	ret = pmic_access(bus, type, reg, true, &v);
+	if (ret)
+		return ret;
+	return pmic_access(bus, type, reg, false, after);
+}
+
+static int do_zuma_pmic(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
+{
+	unsigned int bus, type, reg;
+	u8 v = 0;
+	int ret;
+
+	if (argc < 5)
+		return CMD_RET_USAGE;
+	bus = hextoul(argv[2], NULL);
+	type = hextoul(argv[3], NULL);
+	reg = hextoul(argv[4], NULL);
+	if (!strcmp(argv[1], "write") && argc >= 6) {
+		v = hextoul(argv[5], NULL);
+		ret = pmic_access(bus, type, reg, true, &v);
+		if (!ret)
+			ret = pmic_access(bus, type, reg, false, &v);
+	} else {
+		ret = pmic_access(bus, type, reg, false, &v);
+	}
+	if (ret) {
+		printf("pmic: bus %u type %u reg %#x: ACPM said %d\n", bus, type, reg, ret);
+		return CMD_RET_FAILURE;
+	}
+	printf("pmic: bus %u type %u reg %#x = %#04x\n", bus, type, reg, v);
+	return CMD_RET_SUCCESS;
+}
+
+/*
+ * The touch screen's power, for the kernel's driver (devices/shiba/drivers/input/hakios.akita_touch.c, touchscreen=1),
+ * which does the SPI controller and the chip: as the Pixel 8a's U-Boot did it (hakios_touch), with the Pixel 8's AVDD.
+ * The reset pin (gpp21-2: pinctrl@10C40000, the bank at +0x40: CON +0, DAT +4) an output and low; AVDD (S2MPG14 LDO4M,
+ * register 0x2e: bit 7 on, bits 5:0 the voltage, 1.8 V + 25 mV a step) at 3.3 V (0x3c, zuma-shiba-touch.dtsi) and on;
+ * DVDD (LDO25M, 0x43: 1.8 V) on; 20 ms; the reset pin high.
+ */
+#define TS_PIN_BANK		0x10c40040UL
+#define TS_PIN			2
+#define LDO4M			0x2e
+#define LDO25M			0x43
+
+static int do_zuma_touch(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
+{
+	u8 avdd = 0, dvdd = 0;
+	u32 con;
+	int ret;
+
+	pmic_access(0, 1, LDO4M, false, &avdd);
+	pmic_access(0, 1, LDO25M, false, &dvdd);
+	printf("[oosexgang] touch: before: LDO4M %#04x, LDO25M %#04x, reset pin CON %#x DAT %#x\n", avdd, dvdd,
+	       readl(TS_PIN_BANK), readl(TS_PIN_BANK + 4));
+	con = readl(TS_PIN_BANK);
+	writel((con & ~(0xfu << (4 * TS_PIN))) | (0x1u << (4 * TS_PIN)), TS_PIN_BANK);	/* an output */
+	writel(readl(TS_PIN_BANK + 4) & ~BIT(TS_PIN), TS_PIN_BANK + 4);			/* low */
+	ret = pmic_update(0, 1, LDO4M, 0x3c, 0x3f, &avdd);
+	if (!ret)
+		ret = pmic_update(0, 1, LDO4M, 0x80, 0x80, &avdd);
+	if (!ret)
+		ret = pmic_update(0, 1, LDO25M, 0x80, 0x80, &dvdd);
+	mdelay(20);
+	writel(readl(TS_PIN_BANK + 4) | BIT(TS_PIN), TS_PIN_BANK + 4);			/* high */
+	printf("[oosexgang] touch: %s: LDO4M %#04x (AVDD), LDO25M %#04x (DVDD), reset pin DAT %#x\n",
+	       ret ? "ACPM failed" : "powered, out of reset", avdd, dvdd, readl(TS_PIN_BANK + 4));
+	return ret ? CMD_RET_FAILURE : CMD_RET_SUCCESS;
+}
+
 /*
  * zuma bldrlog [ADDR SIZE]: a look at the bootloader's own log buffer (bldr_log_reserved@fd800000, 1 MiB), which survives a
  * restart and which Google's bootloader reports from at the next start: its first words (a header?), and where its last
@@ -364,6 +553,8 @@ static int do_zuma_bldrlog(struct cmd_tbl *cmdtp, int flag, int argc, char *cons
 
 static struct cmd_tbl cmd_zuma_sub[] = {
 	U_BOOT_CMD_MKENT(bldrlog, 3, 0, do_zuma_bldrlog, "", ""),
+	U_BOOT_CMD_MKENT(pmic, 6, 0, do_zuma_pmic, "", ""),
+	U_BOOT_CMD_MKENT(touch, 1, 0, do_zuma_touch, "", ""),
 	U_BOOT_CMD_MKENT(wdt, 1, 0, do_zuma_wdt, "", ""),
 	U_BOOT_CMD_MKENT(pstore, 1, 0, do_zuma_pstore, "", ""),
 };
@@ -380,9 +571,11 @@ static int do_zuma(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[]
 	return c->cmd(cmdtp, flag, argc - 1, argv + 1);
 }
 
-U_BOOT_CMD(zuma, 4, 0, do_zuma,
+U_BOOT_CMD(zuma, 7, 0, do_zuma,
 	"HakiOS on Google's zuma phones",
 	"wdt - stop the watchdogs in $hakios_wdt, keep $hakios_wdt_net as a slow net\n"
 	"zuma pstore - where the console in RAM is\n"
+	"zuma pmic read|write BUS TYPE REG [VALUE] - a PMIC register through ACPM (S2MPG14: bus 0, regulators type 1)\n"
+	"zuma touch - the touch screen powered and out of reset, for the kernel's driver\n"
 	"zuma bldrlog [addr size] - a look at the bootloader's log buffer (default bldr_log_reserved@fd800000)"
 );
