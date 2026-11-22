@@ -82,7 +82,9 @@ USB working. The two phones share the SoC and most of the board. The table says 
   count, so the 4383's core discovery (the enumeration ROM) will need looking at before the 4398's firmware can go in.
 - **Haptics, a look, 2026-11-22** ([boot-info/first-boot-2026-11-22-haptic.txt](boot-info/first-boot-2026-11-22-haptic.txt)):
   `haptic=1`: the bus (PERIC1 USI0) up, the chip out of reset and answering after the wake-up try it is meant to miss:
-  CS40L26A, devid 0x40a260, rev A1, its DSP running from ROM. Next, `haptic=2` (one of the ROM's effects, no tuning).
+  CS40L26A, devid 0x40a260, rev A1, its DSP running from ROM. `haptic=2`: the ROM's effect 0 taken by its mailbox and
+  **felt on the phone**. Next: Cirrus's RAM firmware from the phone's /vendor/firmware (`haptic=3`), then the Pixel 8's
+  tuning (`haptic=4`: boost 11 V, this phone's f0 and ReDC).
 - The other drivers, one at a time: ~~`pcie=5`~~ ~~`haptic=1`~~ (the Wi-Fi link: it should
   say chip 0x4398), `amp=1`, `thermal=1`.
 - The panel is **google-bigsurf** on this phone (product id 0x84a050, the bootloader's log), not shoreline: the display
