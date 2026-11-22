@@ -85,8 +85,12 @@ USB working. The two phones share the SoC and most of the board. The table says 
   CS40L26A, devid 0x40a260, rev A1, its DSP running from ROM. `haptic=2`: the ROM's effect 0 taken by its mailbox and
   **felt on the phone**. Next: Cirrus's RAM firmware from the phone's /vendor/firmware (`haptic=3`), then the Pixel 8's
   tuning (`haptic=4`: boost 11 V, this phone's f0 and ReDC).
-- The other drivers, one at a time: ~~`pcie=5`~~ ~~`haptic=1`~~ (the Wi-Fi link: it should
-  say chip 0x4398), `amp=1`, `thermal=1`.
+- **Speaker amplifiers, a look, 2026-11-22** ([boot-info/first-boot-2026-11-22-speaker-amps.txt](boot-info/first-boot-2026-11-22-speaker-amps.txt)):
+  `amp=1`: the SPI controller at 0x111c0000 set up, both CS35L41s out of reset and answering, device id 0x35a40, rev B2,
+  their OTP booted: "BOTH SPEAKER AMPLIFIERS ANSWER". Sound itself goes through the AoC (`aoc=3`), which needs its
+  firmware and this phone's calibration from Android: the next step for audio.
+- The other drivers, one at a time: ~~`pcie=5`~~ ~~`haptic=1`~~ ~~`amp=1`~~ (the Wi-Fi link: it should
+  say chip 0x4398), `thermal=1`.
 - The panel is **google-bigsurf** on this phone (product id 0x84a050, the bootloader's log), not shoreline: the display
   driver's rate and brightness commands are to be checked against panel-google-bigsurf.c.
 - USB, touch power and UFS in U-Boot, which the 8a's unpublished U-Boot had.

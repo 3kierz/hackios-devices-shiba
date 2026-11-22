@@ -1,0 +1,6 @@
+[   43.351981]: akita amp: SPI controller at 0x111c0000: MODE_CFG read back 0xaa0 (0xaa0 written), STATUS 0x0
+[   43.359429]: akita amp: left: OTP boot done after 0 ms (IRQ1_STATUS4 0x3, STATUS3 0x20000000), device id 0x35a40 (a CS35L41), revision 0xb2 (metal 2), OTP id 0x8
+[   43.359569]: akita amp: right, CS_REG 0x23 while selected: transfer done, device id 0x35a40
+[   43.361678]: akita amp: pins: gpn1 (right's chip select) CON 0x1 DAT 0x1, gpp1 (left's reset) CON 0x2210 DAT 0xe, gph2 (right's reset) CON 0x1010 DAT 0xa
+[   43.365525]: akita amp: right: OTP boot done after 0 ms (IRQ1_STATUS4 0x3, STATUS3 0x20000000), device id 0x35a40 (a CS35L41), revision 0xb2 (metal 2), OTP id 0x8
+[   43.367320]: akita amp: BOTH SPEAKER AMPLIFIERS ANSWER
