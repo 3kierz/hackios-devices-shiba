@@ -83,8 +83,10 @@ USB working. The two phones share the SoC and most of the board. The table says 
 - **Haptics, a look, 2026-11-22** ([boot-info/first-boot-2026-11-22-haptic.txt](boot-info/first-boot-2026-11-22-haptic.txt)):
   `haptic=1`: the bus (PERIC1 USI0) up, the chip out of reset and answering after the wake-up try it is meant to miss:
   CS40L26A, devid 0x40a260, rev A1, its DSP running from ROM. `haptic=2`: the ROM's effect 0 taken by its mailbox and
-  **felt on the phone**. Next: Cirrus's RAM firmware from the phone's /vendor/firmware (`haptic=3`), then the Pixel 8's
-  tuning (`haptic=4`: boost 11 V, this phone's f0 and ReDC).
+  **felt on the phone**. `haptic=3`, 2026-11-23 ([log](boot-info/first-boot-2026-11-23-haptic-firmware.txt)): Cirrus's RAM
+  firmware from the phone's own /vendor/firmware, read from the small image carried as md1 (`FW_IMAGE=`): the .wmfw (554
+  controls, 14 algorithms, firmware rev 7.2.91), the wavetable and both tunings written, **the RAM firmware runs**, 14
+  waves. Next, `haptic=4`: the Pixel 8's tuning (boost 11 V, this phone's f0 and ReDC) and a click and a vibration.
 - **Speaker amplifiers, a look, 2026-11-22** ([boot-info/first-boot-2026-11-22-speaker-amps.txt](boot-info/first-boot-2026-11-22-speaker-amps.txt)):
   `amp=1`: the SPI controller at 0x111c0000 set up, both CS35L41s out of reset and answering, device id 0x35a40, rev B2,
   their OTP booted: "BOTH SPEAKER AMPLIFIERS ANSWER". Sound itself goes through the AoC (`aoc=3`), which needs its
