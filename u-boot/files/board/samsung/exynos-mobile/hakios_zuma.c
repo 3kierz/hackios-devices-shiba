@@ -231,7 +231,70 @@ static int do_zuma_pstore(struct cmd_tbl *cmdtp, int flag, int argc, char *const
 	return CMD_RET_SUCCESS;
 }
 
+/*
+ * zuma bldrlog [ADDR SIZE]: a look at the bootloader's own log buffer (bldr_log_reserved@fd800000, 1 MiB), which survives a
+ * restart and which Google's bootloader reports from at the next start: its first words (a header?), and where its last
+ * "Starting Linux kernel" line is -- the end of what the bootloader wrote -- with every header word that could be that
+ * length or that end. For learning its layout, so that HakiOS's lines can go into it.
+ */
+static int do_zuma_bldrlog(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
+{
+	ulong base = argc > 2 ? hextoul(argv[1], NULL) : 0xfd800000, size = argc > 2 ? hextoul(argv[2], NULL) : 0x100000;
+	static const char key[] = "Starting Linux kernel";
+	const u8 *p = (const u8 *)base;
+	const u32 *w = (const u32 *)base;
+	long last = -1, first = -1, hits = 0;
+	ulong i, end;
+
+	invalidate_dcache_range(base, base + size);
+	printf("bldrlog at %#lx, %#lx bytes; the first words:\n", base, size);
+	for (i = 0; i < 16; i++)
+		printf("  +%02lx: %08x%s", i * 4, w[i], i % 4 == 3 ? "\n" : "");
+	printf("  as text: \"");
+	for (i = 0; i < 48; i++)
+		putc(p[i] >= 32 && p[i] < 127 ? p[i] : '.');
+	printf("\"\n");
+	for (i = 0; i + sizeof(key) - 1 <= size; i++) {
+		if (p[i] == 'S' && !memcmp(p + i, key, sizeof(key) - 1)) {
+			if (first < 0)
+				first = i;
+			last = i;
+			hits++;
+		}
+	}
+	if (last < 0) {
+		printf("no \"%s\" in it\n", key);
+		return CMD_RET_SUCCESS;
+	}
+	for (end = last; end < size && p[end] && p[end] != '\n'; end++)
+		;
+	if (end < size && p[end] == '\n')
+		end++;
+	printf("\"%s\": %ld times, the first at +%#lx, the last at +%#lx; that line ends at +%#lx\n", key, hits, first, last, end);
+	printf("  after it: \"");
+	for (i = end; i < end + 40 && i < size; i++)
+		putc(p[i] >= 32 && p[i] < 127 ? p[i] : '.');
+	printf("\"\n  (bytes there: %02x %02x %02x %02x)\n", p[end], p[end + 1], p[end + 2], p[end + 3]);
+	printf("  header words near that end (+%#lx):", end);
+	for (i = 0; i < 16; i++) {
+		long d = (long)w[i] - (long)end;
+
+		if (d > -64 && d < 64)
+			printf(" +%02lx=%#x (%+ld)", i * 4, w[i], d);
+	}
+	printf("\n  ... or near base + end (%#lx):", base + end);
+	for (i = 0; i < 16; i++) {
+		long d = (long)w[i] - (long)(base + end);
+
+		if (d > -64 && d < 64)
+			printf(" +%02lx=%#x (%+ld)", i * 4, w[i], d);
+	}
+	printf("\n");
+	return CMD_RET_SUCCESS;
+}
+
 static struct cmd_tbl cmd_zuma_sub[] = {
+	U_BOOT_CMD_MKENT(bldrlog, 3, 0, do_zuma_bldrlog, "", ""),
 	U_BOOT_CMD_MKENT(wdt, 1, 0, do_zuma_wdt, "", ""),
 	U_BOOT_CMD_MKENT(pstore, 1, 0, do_zuma_pstore, "", ""),
 };
@@ -248,8 +311,9 @@ static int do_zuma(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[]
 	return c->cmd(cmdtp, flag, argc - 1, argv + 1);
 }
 
-U_BOOT_CMD(zuma, 2, 0, do_zuma,
+U_BOOT_CMD(zuma, 4, 0, do_zuma,
 	"HakiOS on Google's zuma phones",
 	"wdt - stop the watchdogs in $hakios_wdt, keep $hakios_wdt_net as a slow net\n"
-	"zuma pstore - where the console in RAM is"
+	"zuma pstore - where the console in RAM is\n"
+	"zuma bldrlog [addr size] - a look at the bootloader's log buffer (default bldr_log_reserved@fd800000)"
 );
