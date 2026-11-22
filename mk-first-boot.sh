@@ -31,7 +31,10 @@ python3 tools/hakios-config.py check >/dev/null
 
 # the configuration's arguments, or FIRST_ARGS=... instead (FIRST_ARGS="cpus=1": one core, as the 8a's first run)
 # hello built from source (make hello: hello_wait= and the drivers' sysctls) when there is one, else the prebuilt one
-hello=userland/hello; [ -f "$hello" ] || hello=prebuilt/userland/hello
+# (userland/hello.arm64 first: userland/build.sh rebuilds userland/hello for the unpacked user space -- arm64e for 16.6.1
+# d16ap -- and the kernel refuses that static program as process 1 even with hakios_arm64e=1, EBADARCH, 2026-11-23;
+# make hello builds it arm64: cp userland/hello userland/hello.arm64 after it)
+hello=userland/hello.arm64; [ -f "$hello" ] || hello=userland/hello; [ -f "$hello" ] || hello=prebuilt/userland/hello
 echo "mk-first-boot.sh: user space: $hello"
 # FW_IMAGE=userland/root.apfs: the small image carried too, as the second RAM disk (md1), hello staying the root (md0,
 # the loader's resident image): the drivers read the phone's firmware from its fw/ without a root mounted
