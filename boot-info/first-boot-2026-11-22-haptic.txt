@@ -1,0 +1,5 @@
+[   30.395811]: akita haptic: the battery's bus (U-Boot's): CTL 0x48 FIFO_CTL 0x80083 TRAILING 0xffffff INT_EN 0x80 CONF 0x980110ff TIMEOUT 0xff timing fs 0x1f0ff00/0x30003e0/0x3e0000 sla 0 TRANS_STATUS 0x80001 USI_CON 0 USI_OPTION 0x1
+[   30.395998]: akita haptic: CMU_PERIC1 USI0: mux 0x10 div 0 gates 0x200000/0x200000/0x200000 qch 0x2; sysreg mode 0x4; gpp19 con 0x220033 dat 0x33
+[   30.396235]: akita haptic: HSI2C0 as found: CTL 0x8 FIFO_CTL 0x80083 TRAILING 0xffffff INT_EN 0x80 CONF 0x980110ff TIMEOUT 0xff timing fs 0x1f0ff00/0x30003e0/0x3e0000 sla 0 TRANS_STATUS 0x80001 USI_CON 0 USI_OPTION 0x1
+[   30.447658]: akita haptic: I2C write of 4 bytes at 0x43 failed (the end, INT_STAT 0xffffffff): now INT_STAT 0 FIFO_STAT 0x1000004 TRANS_STATUS 0x80001 ERROR_STAT 0
+[   30.451564]: akita haptic: CS40L26 devid 0x40a260 (CS40L26A) revid 0xa1; global enables 0, power status 0x201, IRQ1 status 0x1; the DSP: pm state 0x2, halo state 0x2, req active 0x1

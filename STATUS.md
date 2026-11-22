@@ -80,8 +80,11 @@ USB working. The two phones share the SoC and most of the board. The table says 
   `pcie=5`: the chip powered (WL_REG_ON), the PHY's PLL, CDR and calibration, the link up at Gen2 x1 on the first try, and
   the chip: Broadcom 14e4:4444, `chipcommon: chip 0x4398, revision 3`. Its ID word gives interconnect type 6 and no core
   count, so the 4383's core discovery (the enumeration ROM) will need looking at before the 4398's firmware can go in.
-- The other drivers, one at a time: ~~`pcie=5`~~ (the Wi-Fi link: it should
-  say chip 0x4398), `haptic=1`, `amp=1`, `thermal=1`.
+- **Haptics, a look, 2026-11-22** ([boot-info/first-boot-2026-11-22-haptic.txt](boot-info/first-boot-2026-11-22-haptic.txt)):
+  `haptic=1`: the bus (PERIC1 USI0) up, the chip out of reset and answering after the wake-up try it is meant to miss:
+  CS40L26A, devid 0x40a260, rev A1, its DSP running from ROM. Next, `haptic=2` (one of the ROM's effects, no tuning).
+- The other drivers, one at a time: ~~`pcie=5`~~ ~~`haptic=1`~~ (the Wi-Fi link: it should
+  say chip 0x4398), `amp=1`, `thermal=1`.
 - The panel is **google-bigsurf** on this phone (product id 0x84a050, the bootloader's log), not shoreline: the display
   driver's rate and brightness commands are to be checked against panel-google-bigsurf.c.
 - USB, touch power and UFS in U-Boot, which the 8a's unpublished U-Boot had.
