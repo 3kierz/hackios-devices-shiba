@@ -93,7 +93,12 @@ USB working. The two phones share the SoC and most of the board. The table says 
   `amp=1`: the SPI controller at 0x111c0000 set up, both CS35L41s out of reset and answering, device id 0x35a40, rev B2,
   their OTP booted: "BOTH SPEAKER AMPLIFIERS ANSWER". Sound itself goes through the AoC (`aoc=3`), which needs its
   firmware and this phone's calibration from Android: the next step for audio.
-- The other drivers, one at a time: ~~`pcie=5`~~ ~~`haptic=1`~~ ~~`amp=1`~~ (the Wi-Fi link: it should
+- **Sound, 2026-11-23** ([boot-info/first-boot-2026-11-23-sound.txt](boot-info/first-boot-2026-11-23-sound.txt)): `aoc=3 amp=2
+  speaker=1 aocplay=4`: both amps set up for the AoC's TDM_0; the GSA reached through its mailbox and Trusty (TIPC online,
+  the AoC inactive); the phone's own aoc.bin (27 MB) copied, **authenticated and loaded by the GSA in 342 ms**, started
+  with the Pixel 8's parameters (board id 0x40302, gnss-type 0): **running after 700 ms, 94 services**; a 440 Hz tone
+  through audio_playback1, bound to the speaker, the DSP in playback, the amps powered up: **heard from the phone**.
+- The other drivers, one at a time: ~~`pcie=5`~~ ~~`haptic=1`~~ ~~`amp=1`~~ ~~`aoc=3`~~ (the Wi-Fi link: it should
   say chip 0x4398), `thermal=1`.
 - The panel is **google-bigsurf** on this phone (product id 0x84a050, the bootloader's log), not shoreline: the display
   driver's rate and brightness commands are to be checked against panel-google-bigsurf.c.

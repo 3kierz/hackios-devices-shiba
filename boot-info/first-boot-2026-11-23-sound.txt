@@ -1,0 +1,78 @@
+[   51.252651]: akita amp: SPI controller at 0x111c0000: MODE_CFG read back 0xaa0 (0xaa0 written), STATUS 0x0
+[   51.260185]: akita amp: left: OTP boot done after 0 ms (IRQ1_STATUS4 0x3, STATUS3 0x20000000), device id 0x35a40 (a CS35L41), revision 0xb2 (metal 2), OTP id 0x8
+[   51.260341]: akita amp: right, CS_REG 0x23 while selected: transfer done, device id 0x35a40
+[   51.265333]: akita amp: pins: gpn1 (right's chip select) CON 0x1 DAT 0x1, gpp1 (left's reset) CON 0x2210 DAT 0xe, gph2 (right's reset) CON 0x1010 DAT 0xa
+[   51.270160]: akita amp: right: OTP boot done after 0 ms (IRQ1_STATUS4 0x3, STATUS3 0x20000000), device id 0x35a40 (a CS35L41), revision 0xb2 (metal 2), OTP id 0x8
+[   51.272412]: akita amp: BOTH SPEAKER AMPLIFIERS ANSWER
+[   51.282034]: akita amp: left: set up: 98 OTP trims, SP_FORMAT 0x20180000, RX slots 0x100, PLL_CLK_CTRL 0x510, PWR_CTRL2 0x20, DAC source 0x8
+[   51.293787]: akita amp: right: set up: 98 OTP trims, SP_FORMAT 0x20180000, RX slots 0x1, PLL_CLK_CTRL 0x510, PWR_CTRL2 0x20, DAC source 0x8
+[   51.296152]: akita amp: both set up for the AoC's TDM_0, powered down until akita_amp_speaker(1)
+[   56.254795]: akita aoc: aoc_req 0x1, the AoC's state 0x1
+[   56.257160]: akita aoc: GSA mailbox: INTMR0 0x0 INTSR0 0x0 INTMSR0 0x0; SR0-3 0x80000041 0x0 0x2 0x0
+[   56.263193]: akita aoc: GSA request 3: answered (SR0 0x80000003, error 1, 0 words)
+[   56.265503]: akita aoc: THE GSA ANSWERS: chip id (0 words) 00000000 00000000 00000000 00000000
+[   56.271146]: akita aoc: fw/aoc.bin: 29076160 bytes, auth magic 0x434f41 generation 2, locked at 0x94000000 + 0x1c00000; superbin 0xaabbccdd, image 0x1c00000, "15231849-polygon"
+[   56.273778]: akita trusty: FF-A buffers registered (tx 0x889980000, rx 0x889984000, 4 pages each)
+[   56.276155]: akita trusty: a page shared (0x889988000): handle 0xffffffc0
+[   56.278776]: akita trusty: THE VIRTIO DESCRIPTION, 128 bytes: version 1, 1 entries
+[   56.281227]: akita trusty:   entry 0: vdev id 13 notifyid 0 features 0x0/0x0, config 40 bytes, status 0, 2 vrings
+[   56.283604]: akita trusty:     vring 0: da 0x0 align 4096 num 32 notifyid 1
+[   56.285948]: akita trusty:     vring 1: da 0x0 align 4096 num 32 notifyid 2
+[   56.288305]: akita trusty:     tipc config: message buffers up to 4096 bytes, aligned 4096, "dev0"
+[   56.291099]: akita trusty: virtio started (rings: rx handle 0xffffffc1, tx handle 0xffffffc2)
+[   56.317412]: akita trusty: TIPC ONLINE
+[   56.320264]: akita trusty: connection answered: target 1024 status 0 remote 1000, messages up to 4096 bytes, 1 at once
+[   56.322983]: akita trusty: a message from 0 to 1024, 12 bytes
+[   56.325504]: akita trusty: THE GSA SAYS (state command 0): 0x80000001, error 0, THE AoC'S STATE 0 (0 inactive, 1 loaded, 2 running)
+[   56.327907]: akita aoc: the AoC's state 0; copying the image ...
+[   56.644173]: akita aoc: ... 8 MB
+[   56.650466]: akita aoc: ... 16 MB
+[   56.657612]: akita aoc: ... 24 MB
+[   56.661949]: akita aoc: the image copied (27 MB); the GSA asked to authenticate and load it (header at 0x88acc4000)
+[   56.1010106]: akita aoc: GSA request 90: answered (SR0 0x8000005a, error 0, 0 words)
+[   56.1012499]: akita aoc: THE GSA LOADED THE IMAGE in 342 ms
+[   56.1015072]: akita aoc: parameters written (chip type 1 revision 0x1); the AoC asked on (aoc_req), started through the GSA
+[   57.303490]: akita trusty: a message from 0 to 1024, 12 bytes
+[   57.306027]: akita trusty: THE GSA SAYS (state command 1): 0x80000001, error 0, THE AoC'S STATE 2 (0 inactive, 1 loaded, 2 running)
+[   58.011684]: akita aoc: THE AoC IS UP after 700 ms: its IPC block, fw 0x0 hw 0x41a53 status 0x0, 94 services of 92 bytes at +0xc0, "AOC sha: [69c54f968b286e44cfeaa6"
+[   58.016866]: akita aoc: services: control com.google.usf com.google.usf.non_wake_up com.google.chre com.google.chre.non_wake_up usf_sh_mem_doorbell com.google.umfw_stat audio_output_tuning audio_output_tuning_ext
+[   58.022145]: akita aoc: services: audio_output_control audio_input_tuning audio_input_control sound_trigger usb_control aocx_control logging debug factory_diag hotword_notification uwb_service com.google.tbn_service mel_processor
+[   58.027567]: akita aoc: services: chre_bt_offload_ctl chre_ctl audio_bulk_tx audio_bulk_rx audio_playback0 audio_playback1 audio_playback2 audio_playback3 audio_playback4 audio_playback5 audio_playback6 audio_haptaudio audio_raw
+[   58.033032]: akita aoc: services: audio_ultrasonic audio_immersive audio_haptics audio_hifiin audio_hifiout audio_voip_rx audio_incall_pb_0 audio_incall_pb_1 audio_incall_pb_2 audio_incall_cap_0 audio_incall_cap_1
+[   58.038618]: akita aoc: services: audio_incall_cap_2 audio_incall_cap_3 audio_tap0 audio_tap1 audio_tap4 audio_tap5 audio_tap8 audio_tap9 audio_capture0 audio_capture1 audio_capture2 audio_capture3 ultrasonic_capture audio_voip_tx
+[   58.044230]: akita aoc: services: audio_spatial_f1 audio_input_bulk_tx audio_input_bulk_rx hotword_pcm ambient_pcm model_data audio_dcdoff_ref decoder_eof audio_android_aec audio_capture_inject audio_ap_offload_tx
+[   58.050011]: akita aoc: services: audio_ap_offload_rx audio_rtp_tx audio_rtp_rx audio_hotword_tap audio_displayport trace_a32 trace_3z_0 trace_3z_1 trace_f1 mc_headpos aocx_tapout20 aocx_inject20 aocx_tapout21 aocx_inject21
+[   58.055706]: akita aoc: services: aocx_tapout40 aocx_inject40 aocx_tapout41 aocx_inject41 chre_bt_offload_data_tx chre_bt_offload_data_rx chre_data_tx chre_data_rx chre_data_rx_nonwake
+[   58.061564]: akita aoc: audio_output_control: flags 0x800000 (type 0, mailbox 16); up 64 slots of 64 at +0x12b000 (tx 0 rx 0), down 64 slots of 64 at +0x12a000 (tx 0 rx 0)
+[   58.065158]: akita aoc: THE AoC ANSWERS: 9 bytes, type 0 counter 0 length 9, id 233, reply 0, DSP mode 0 (0 idle, 1 playback, 2 voice)
+[   58.068141]: akita aoc: aocplay: a 440 Hz tone for 4 s, peak as aocplay_amp, both sides
+[   58.071399]: akita aoc: audio_playback1: flags 0xa10000 (type 1, mailbox 20), down: 16384 bytes at +0x160000, slots 1, tx 0 rx 0 wp 0 rp 0
+[   58.075166]: akita aoc: EP_SETUP (206): done, reply field 0
+[   58.078665]: akita aoc: EP_SETUP2 (298): done, reply field 0
+[   58.082721]: akita aoc: BIND2 to the speaker (271): done, reply field 0
+[   58.085623]: akita aoc: volume 1000 of 1000 for entry point 1 at sink 0
+[   58.089246]: akita aoc: SET_PARAMETER (volume) (209): done, reply field 0
+[   58.092923]: akita aoc: SOURCE on (201): done, reply field 0
+[   58.096436]: akita aoc: GET_DSP_STATE (233): done, reply field 0
+[   58.099920]: akita aoc: GET_SINK_PROCESSING_STATE (234): done, reply field 0
+[   58.103417]: akita aoc: GET_SINKS_BITMAPS (245): done, reply field 0
+[   58.109274]: akita aoc: output: DSP mode 1 (0 idle, 1 playback, 2 voice), speaker sink processing 1 (0 idle, 1 active, 2 bypass), channel bitmaps speaker 0x2 headphone 0x0 bt 0x0 modem 0x0 usb 0x0
+[   58.351934]: akita amp: left: powered up (PUP_DONE after 1 ms)
+[   58.355045]: akita amp: left on: PWR_CTRL1 0x1, IRQ1_STATUS 0x400000 0x0 0x2000002f 0x80000003 PLL locked
+[   58.359538]: akita amp: right: powered up (PUP_DONE after 1 ms)
+[   58.362617]: akita amp: right on: PWR_CTRL1 0x1, IRQ1_STATUS 0x400000 0x0 0x2000002f 0x80000003 PLL locked
+[   58.694933]: akita aoc: GET_DSP_STATE (233): done, reply field 0
+[   58.698560]: akita aoc: GET_SINK_PROCESSING_STATE (234): done, reply field 0
+[   58.701968]: akita aoc: GET_SINKS_BITMAPS (245): done, reply field 0
+[   58.707711]: akita aoc: output: DSP mode 1 (0 idle, 1 playback, 2 voice), speaker sink processing 1 (0 idle, 1 active, 2 bypass), channel bitmaps speaker 0x2 headphone 0x0 bt 0x0 modem 0x0 usb 0x0
+[   59.253531]: akita aoc: playing: the AoC has read 218880 bytes in 1137 ms (192341 bytes/s; 192000 is 48 kHz stereo 16-bit), queued 9600
+[   60.366292]: akita aoc: playing: the AoC has read 432000 bytes in 2248 ms (192169 bytes/s; 192000 is 48 kHz stereo 16-bit), queued 9600
+[   61.478904]: akita aoc: playing: the AoC has read 645120 bytes in 3358 ms (192111 bytes/s; 192000 is 48 kHz stereo 16-bit), queued 9600
+[   62.591425]: akita aoc: playing: the AoC has read 858240 bytes in 4467 ms (192088 bytes/s; 192000 is 48 kHz stereo 16-bit), queued 9600
+[   62.594579]: akita amp: left before off: PWR_CTRL1 0x1, IRQ1_STATUS 0x400000 0x0 0x2000002f 0x80000003 PLL locked
+[   62.597806]: akita amp: left: powered down (PDN_DONE after 0 ms)
+[   62.601097]: akita amp: right before off: PWR_CTRL1 0x1, IRQ1_STATUS 0x400000 0x0 0x2000002f 0x80000003 PLL locked
+[   62.604476]: akita amp: right: powered down (PDN_DONE after 0 ms)
+[   62.608237]: akita aoc: SOURCE off (201): done, reply field 0
+[   62.612238]: akita aoc: BIND2 off (271): done, reply field 0
+[   62.619175]: akita aoc: sound: WHAT DARWIN PLAYS GOES TO THE SPEAKERS from here on (the AoC's entry point 1, audio_playback1, started while there is sound: 48 kHz 16-bit stereo, three 20 ms blocks ahead; the guard's gain 0.000 dB; the amplifiers on while there is sound (with speaker=1))
