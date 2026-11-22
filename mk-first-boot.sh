@@ -48,6 +48,12 @@ grep -q hk_load_base u-boot/cmd/hakios.c ||
 	{ echo "mk-first-boot.sh: uefi/ has no hakios load for a container behind U-Boot (oosexgang/hakios-uefi pull request 2)" >&2; exit 1; }
 uefi/u-boot/build.sh shiba
 
+# mkubootimg.py wants the phone's own tree there (a Pixel's image does not carry it: the bootloader hands over its own);
+# pull-boot-info.sh leaves it in boot-info/ (kept out of git: it carries the phone's identifiers)
+if [ ! -f "$here/prebuilt/device-tree.dtb" ]; then
+	[ -f "$here/boot-info/fdt.dtb" ] || { echo "mk-first-boot.sh: no boot-info/fdt.dtb: run devices/shiba/pull-boot-info.sh first" >&2; exit 1; }
+	cp "$here/boot-info/fdt.dtb" "$here/prebuilt/device-tree.dtb"
+fi
 python3 tools/mkubootimg.py -d shiba -p "$out/payload.bin" -o "$out/hakios-shiba.img"
 echo
 echo "mk-first-boot.sh: $out/hakios-shiba.img. On a machine where fastboot reaches the phone (Windows' platform-tools):"
