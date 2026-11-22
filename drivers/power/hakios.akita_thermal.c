@@ -77,6 +77,7 @@ static uint64_t next_log;
 
 static const char *const ntc_names[NNTC] = { "neutral", "quiet", "charge", "usb_pwr", "cam", "disp", "north", "soc" };
 #define NTC_SOC                 7               /* soc_therm (zuma_tm1 7 on the Pixel 8) */
+static int ntc_mc[NNTC];                        /* millidegrees (the skin only once every channel was read) */
 
 /*
  * Android's virtual sensors for the Pixel 8 (thermal_info_config_shiba.json), in thousandths: each row the weights of
@@ -124,7 +125,6 @@ skin_max(const int16_t (*rows)[SKIN_TERMS + 1], unsigned n, int battery_c)
 	}
 	return best;
 }
-static int ntc_mc[NNTC];                        /* millidegrees (the skin only once every channel was read) */
 static bool ntc_ok;                             /* the meter answered and its channels are on */
 static int thermal_skin_mc = -273000, thermal_skin_level, thermal_battery_c = -273;
 static int thermal_skin_charge_mc = -273000;    /* Android's VIRTUAL-SKIN-CHARGE (what the charge current is held by) */

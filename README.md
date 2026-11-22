@@ -96,7 +96,18 @@ git -C uefi fetch origin pull/2/head:pr2 && git -C uefi checkout pr2   # after t
 ```
 
 An AArch64 GCC for U-Boot: `sudo apt install gcc-aarch64-linux-gnu`, or Arm's toolchain unpacked anywhere with its
-`bin/` on `PATH` (`aarch64-none-elf-`). The kernel: `make kernel` (theos with `sdks/iPhoneOS16.5.sdk`), or, for this
+`bin/` on `PATH` (`aarch64-none-elf-`).
+
+The kernel from source (`make kernel`) needs theos in `~/theos` with its Linux toolchain in `toolchain/linux/iphone/`
+(L1ghtmann's `iOSToolchain-x86_64.tar.xz`, which unpacks as `linux/iphone`) and `sdks/iPhoneOS16.5.sdk` (from
+github.com/theos/sdks). On Ubuntu two links were also needed in the build's own tools (built here 2026-11-22):
+
+```sh
+ln -s ~/theos/toolchain/linux/iphone/bin/dsymutil xnu-deps/host/bin/dsymutil   # the build's xcrun finds none otherwise
+ln -s /usr/bin/python3 xnu-deps/host/bin/python                                # the lldb macros run `python`
+```
+
+Exit status 2 with `make-kernel: built: hakios-kernel` is the kext symbol-set checks, which fail on this configuration. The kernel: `make kernel` (theos with `sdks/iPhoneOS16.5.sdk`), or, for this
 first run only, `cp prebuilt/hakios-kernel hakios-kernel` (older, and without the zuma drivers, which this run does not use).
 
 ```sh
