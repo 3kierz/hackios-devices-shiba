@@ -65,8 +65,10 @@ the 8a's camera tuning. Point them at `shiba`, or leave them unused.
    - `soc/zuma.addrs`: regenerate with `soc/zuma-addrs.py boot-info/fdt.dtb`.
 3. **Haptics calibration** (optional): as root, `cat /sys/bus/i2c/devices/*-0043/calibration/{f0_stored,redc_stored}` and add
    `haptic_f0=0x... haptic_redc=0x...` to the command line.
-4. **Firmware** (never committed): the Mali CSF firmware, the AoC image, the amps' and haptics' tunings from `/vendor/firmware`,
-   as for the 8a (see the base kernel's `userland/build.sh`).
+4. **Firmware** (never committed): `devices/shiba/pull-firmware.sh` (or `make firmware DEVICE=shiba`), with root, copies the
+   phone's own `/vendor/firmware` files each driver reads into the kernel tree's `fw-gpu`, `fw-haptic`, `fw-audio`, `fw-aoc`
+   and `fw-wifi` (the BCM4398's, kept for its port). `userland/build.sh` packs them into the user-space images' `fw/`,
+   where the drivers read them: the `hello` test runs carry none.
 
 ## First boot
 
