@@ -161,6 +161,14 @@ static volatile uint32_t *dsim_regs;
 #define DSIM0           0x19440000ULL
 static volatile uint32_t *dsim;                 /* DSIM0, for the panel's commands (dsim_dcs) */
 static uint32_t panel_on = 1, max_nits = 800;  /* display_panel=, display_max_nits= (panel_commands) */
+/*
+ * Which panel the Pixel 8 has: both are fitted (Android's tree: google-bigsurf, a BOE panel with a Novatek-style
+ * controller, and google-shoreline, Samsung's), and Google's bootloader picks by the panel's id and says which on the
+ * kernel's command line (exynos_drm.panel_name=google-bigsurf.84a050 on the phone this port runs on; HakiOS's U-Boot
+ * prints it). panel_name=bigsurf (the default) or panel_name=shoreline. Their rate and brightness commands differ.
+ */
+enum { PANEL_BIGSURF, PANEL_SHORELINE };
+static int panel_kind = PANEL_BIGSURF;
 static uint32_t dimming = 1;                    /* display_dimming=0: the panel's smooth dimming not turned on */
 static uint32_t health_on = 1;                 /* display_health=0: the error flags not read (a hang's suspect, 11-10) */
 
@@ -286,13 +294,25 @@ display_buffers(vm_offset_t va[3], uint32_t *count, uint32_t *width, uint32_t *h
 	PE_parse_boot_argn("display_health", &health_on, sizeof(health_on));
 	PE_parse_boot_argn("display_panel", &panel_on, sizeof(panel_on));
 	PE_parse_boot_argn("display_max_nits", &max_nits, sizeof(max_nits));
+	{
+		char name[16] = "";
+
+		if (PE_parse_boot_argn("panel_name", name, sizeof(name)) && strncmp(name, "shoreline", 9) == 0) {
+			panel_kind = PANEL_SHORELINE;
+		}
+		printf("akita_display: the panel is google-%s (panel_name=)\n", panel_kind == PANEL_SHORELINE ? "shoreline" : "bigsurf");
+	}
 	PE_parse_boot_argn("display_dimming", &dimming, sizeof(dimming));
 	PE_parse_boot_argn("display_dark_ms", &dark_ms, sizeof(dark_ms));
 	PE_parse_boot_argn("display_sleep", &sleep_mode, sizeof(sleep_mode));
 	PE_parse_boot_argn("vsync_clock", &vs_on, sizeof(vs_on));
 	PE_parse_boot_argn("flip_one", &one_a_refresh, sizeof(one_a_refresh));
 	PE_parse_boot_argn("display_tl", &display_tl, sizeof(display_tl));
+	/* bigsurf's HBM (over 1000 nits) wants its own sequence (panel-google-bigsurf.c, bigsurf_update_irc): not sent yet */
 	max_nits = max_nits < 100 ? 100 : max_nits > 1400 ? 1400 : max_nits;
+	if (panel_kind == PANEL_BIGSURF && max_nits > 1000) {
+		max_nits = 1000;
+	}
 	dsim = (volatile uint32_t *)ml_io_map(DSIM0, 0x1000);     /* (the panel's commands: panel_commands) */
 	if (health_on) {
 		dsim_regs = dsim;       /* DSIM0 (its error flags: health_check) */
@@ -1112,10 +1132,24 @@ panel_set_hz(uint32_t hz)
 			delay(100);
 		}
 	}
-	ok = dsim_dcs(key_on, sizeof(key_on)) && dsim_dcs(hz == 120 ? hs120 : hs60, 3) &&
-	    dsim_dcs(update, sizeof(update)) && dsim_dcs(key_off, sizeof(key_off)) &&
-	    dsim_dcs(key_on, sizeof(key_on)) && dsim_dcs(hz == 120 ? te120 : te60, 2) && dsim_dcs(te_para, sizeof(te_para)) &&
-	    dsim_dcs(hz == 120 ? te_width120 : te_width60, 5) && dsim_dcs(key_off, sizeof(key_off));
+	if (panel_kind == PANEL_BIGSURF) {
+		/*
+		 * bigsurf (panel-google-bigsurf.c, bigsurf_change_frequency, HBM off): 120 Hz is 2F 00 and the gamma curve 26 00;
+		 * 60 Hz is 2F 30, then on the controller's command page 0 (F0 55 AA 52 08 00) the parameter offset 6F B0 and
+		 * BA 41. No test key and no TE command on this panel.
+		 */
+		const uint8_t rate120[] = { 0x2f, 0x00 }, gamma120[] = { 0x26, 0x00 }, rate60[] = { 0x2f, 0x30 };
+		const uint8_t page0[] = { 0xf0, 0x55, 0xaa, 0x52, 0x08, 0x00 }, offset[] = { 0x6f, 0xb0 }, set60[] = { 0xba, 0x41 };
+
+		ok = hz == 120 ? dsim_dcs(rate120, 2) && dsim_dcs(gamma120, 2) :
+		    dsim_dcs(rate60, 2) && dsim_dcs(page0, sizeof(page0)) && dsim_dcs(offset, 2) && dsim_dcs(set60, 2);
+	} else {
+		ok = dsim_dcs(key_on, sizeof(key_on)) && dsim_dcs(hz == 120 ? hs120 : hs60, 3) &&
+		    dsim_dcs(update, sizeof(update)) && dsim_dcs(key_off, sizeof(key_off)) &&
+		    dsim_dcs(key_on, sizeof(key_on)) && dsim_dcs(hz == 120 ? te120 : te60, 2) &&
+		    dsim_dcs(te_para, sizeof(te_para)) && dsim_dcs(hz == 120 ? te_width120 : te_width60, 5) &&
+		    dsim_dcs(key_off, sizeof(key_off));
+	}
 	/* the new rate measured afresh */
 	delay(200000);
 	measure_hz();
@@ -1140,7 +1174,7 @@ static volatile uint32_t want_level, sent_level;       /* the panel's level; 0: 
 static volatile uint32_t want_on = 1, sent_on = 1;
 static uint32_t levels_sent, levels_said, panel_fails;
 SYSCTL_UINT(_kern_hakios, OID_AUTO, display_level, CTLFLAG_RD | CTLFLAG_LOCKED, (uint32_t *)&sent_level, 0,
-    "the panel's brightness level last sent (209-4095; 0: the bootloader's)");
+    "the panel's brightness level last sent (bigsurf 1-3827, shoreline 209-4095; 0: the bootloader's)");
 SYSCTL_UINT(_kern_hakios, OID_AUTO, display_on, CTLFLAG_RD | CTLFLAG_LOCKED, (uint32_t *)&sent_on, 0,
     "the panel lit (1) or not (0)");
 
@@ -1150,6 +1184,13 @@ nits_to_level(uint32_t nits16)
 	uint64_t n = nits16, lo = 2ull << 16, mid = 1000ull << 16, top = (uint64_t)max_nits << 16;
 
 	n = n < lo ? lo : n > top ? top : n;
+	if (panel_kind == PANEL_BIGSURF) {
+		/* bigsurf_btr_configs, EVT1 and later: 1 (2 nits) to 3574 (1000 nits); 3575-3827 its HBM (to 1400 nits) */
+		if (n <= mid) {
+			return 1 + (uint32_t)((n - lo) * (3574 - 1) / (mid - lo));
+		}
+		return 3575 + (uint32_t)((n - mid) * (3827 - 3575) / ((1400ull << 16) - mid));
+	}
 	if (n <= mid) {
 		return 209 + (uint32_t)((n - lo) * (3514 - 209) / (mid - lo));
 	}

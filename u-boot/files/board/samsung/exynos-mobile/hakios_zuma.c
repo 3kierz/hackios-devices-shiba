@@ -31,6 +31,9 @@
 #include <cpu_func.h>
 #include <env.h>
 #include <event.h>
+#include <fdt_support.h>
+#include <init.h>
+#include <linux/libfdt.h>
 #include <membuf.h>
 #include <stdio_dev.h>
 #include <vsprintf.h>
@@ -490,6 +493,39 @@ static int do_zuma_touch(struct cmd_tbl *cmdtp, int flag, int argc, char *const 
 }
 
 /*
+ * zuma panel: which panel Google's bootloader found (it reads the panel's id and says so on the kernel's command line it
+ * hands over: exynos_drm.panel_name=google-bigsurf.84a050). The Pixel 8 has either google-bigsurf or google-shoreline;
+ * the kernel's display driver takes panel_name=bigsurf or shoreline. Also in $hakios_panel.
+ */
+static int do_zuma_panel(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
+{
+	const void *fdt = (const void *)get_prev_bl_fdt_addr();
+	const char *args, *p, *end;
+	char name[48];
+	int node, len;
+
+	if (!fdt || fdt_check_header(fdt) || (node = fdt_path_offset(fdt, "/chosen")) < 0 ||
+	    !(args = fdt_getprop(fdt, node, "bootargs", &len))) {
+		printf("[oosexgang] panel: no command line from the bootloader\n");
+		return CMD_RET_FAILURE;
+	}
+	p = strstr(args, "exynos_drm.panel_name=");
+	if (!p) {
+		printf("[oosexgang] panel: the bootloader names none\n");
+		return CMD_RET_FAILURE;
+	}
+	p += strlen("exynos_drm.panel_name=");
+	for (end = p; *end && *end != ' ' && end - p < (long)sizeof(name) - 1; end++)
+		;
+	memcpy(name, p, end - p);
+	name[end - p] = 0;
+	env_set("hakios_panel", name);
+	printf("[oosexgang] panel: %s (the kernel's panel_name=%s)\n", name,
+	       strstr(name, "shoreline") ? "shoreline" : strstr(name, "bigsurf") ? "bigsurf" : "?");
+	return CMD_RET_SUCCESS;
+}
+
+/*
  * zuma bldrlog [ADDR SIZE]: a look at the bootloader's own log buffer (bldr_log_reserved@fd800000, 1 MiB), which survives a
  * restart and which Google's bootloader reports from at the next start: its first words (a header?), and where its last
  * "Starting Linux kernel" line is -- the end of what the bootloader wrote -- with every header word that could be that
@@ -555,6 +591,7 @@ static struct cmd_tbl cmd_zuma_sub[] = {
 	U_BOOT_CMD_MKENT(bldrlog, 3, 0, do_zuma_bldrlog, "", ""),
 	U_BOOT_CMD_MKENT(pmic, 6, 0, do_zuma_pmic, "", ""),
 	U_BOOT_CMD_MKENT(touch, 1, 0, do_zuma_touch, "", ""),
+	U_BOOT_CMD_MKENT(panel, 1, 0, do_zuma_panel, "", ""),
 	U_BOOT_CMD_MKENT(wdt, 1, 0, do_zuma_wdt, "", ""),
 	U_BOOT_CMD_MKENT(pstore, 1, 0, do_zuma_pstore, "", ""),
 };
@@ -577,5 +614,6 @@ U_BOOT_CMD(zuma, 7, 0, do_zuma,
 	"zuma pstore - where the console in RAM is\n"
 	"zuma pmic read|write BUS TYPE REG [VALUE] - a PMIC register through ACPM (S2MPG14: bus 0, regulators type 1)\n"
 	"zuma touch - the touch screen powered and out of reset, for the kernel's driver\n"
+	"zuma panel - which panel the bootloader found ($hakios_panel)\n"
 	"zuma bldrlog [addr size] - a look at the bootloader's log buffer (default bldr_log_reserved@fd800000)"
 );
