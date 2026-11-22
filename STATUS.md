@@ -86,7 +86,9 @@ USB working. The two phones share the SoC and most of the board. The table says 
   **felt on the phone**. `haptic=3`, 2026-11-23 ([log](boot-info/first-boot-2026-11-23-haptic-firmware.txt)): Cirrus's RAM
   firmware from the phone's own /vendor/firmware, read from the small image carried as md1 (`FW_IMAGE=`): the .wmfw (554
   controls, 14 algorithms, firmware rev 7.2.91), the wavetable and both tunings written, **the RAM firmware runs**, 14
-  waves. Next, `haptic=4`: the Pixel 8's tuning (boost 11 V, this phone's f0 and ReDC) and a click and a vibration.
+  waves. `haptic=4` ([log](boot-info/first-boot-2026-11-23-haptic-tuned.txt)): the boost inductor checked, the amplifier set
+  up with the Pixel 8's 11 V boost and this phone's factory f0 and ReDC (read from Android's sysfs, given as haptic_f0= and
+  haptic_redc=), **a click and a 300 ms vibration felt**. Left: `haptic=5`, iOS's own feedback, with iOS running.
 - **Speaker amplifiers, a look, 2026-11-22** ([boot-info/first-boot-2026-11-22-speaker-amps.txt](boot-info/first-boot-2026-11-22-speaker-amps.txt)):
   `amp=1`: the SPI controller at 0x111c0000 set up, both CS35L41s out of reset and answering, device id 0x35a40, rev B2,
   their OTP booted: "BOTH SPEAKER AMPLIFIERS ANSWER". Sound itself goes through the AoC (`aoc=3`), which needs its
