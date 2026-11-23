@@ -290,8 +290,12 @@ KeyBagVersion, OpaqueStuff. The stand-in is now such a plist.
 loaded the persona; boot tasks dirs_cleaner, xpcroleaccountd, init_featureflags, auearlyboot, tzinit, finish-restore,
 sysstatuscheck, prng_seedctl ran; then launchd_cache_loader aborted ("Failed to create SecStaticCodeRef
 errSecCSStaticCodeNotFound": HakiOS hides Apple's xpc/launchd.plist so that launchd runs its curated LaunchDaemons) and
-launchd panicked. The loader has its own switch, boot-arg launchd_unsecure_cache=PATH; the build now writes a
+launchd panicked. The loader has its own switch, boot-arg launchd_unsecure_cache; the build now writes a
 launchd.plist of HakiOS's own (Apple's, its LaunchDaemons replaced by HakiOS's 421) into the xpc folder init binds.
+**Twenty-fourth boot:** "Using default cache paths", then "Failed to verify codedirectory errSecCSUnsigned": the
+cache was found, but the switch was not taken. Disassembled (llvm-objdump), the loader reads launchd_unsecure_cache=
+with strtoul: it is a number, not a path, and a path reads as 0. It is now launchd_unsecure_cache=1, which loads the
+default path, HakiOS's cache, without the signature.
 
 1. `darwin-write.py`: the root volume and the cryptexes into `darwin`, read back and compared; the data volume made.
 2. Boot as now, `fastboot boot`, with `root_apfs=ufs_darwin var_hfs=ufs_darwin_data ufs=2` (the shiba configuration's
