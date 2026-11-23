@@ -296,6 +296,13 @@ launchd.plist of HakiOS's own (Apple's, its LaunchDaemons replaced by HakiOS's 4
 cache was found, but the switch was not taken. Disassembled (llvm-objdump), the loader reads launchd_unsecure_cache=
 with strtoul: it is a number, not a path, and a path reads as 0. It is now launchd_unsecure_cache=1, which loads the
 default path, HakiOS's cache, without the signature.
+**Twenty-fifth boot:** "Using unsecure cache", "Cache sent to launchd successfully", "Early boot complete. Continuing
+system boot." Then launchd's own check: "unexpected exec of non-platform binary: /redwood/sbin/init: com.hakios.demo"
+(a job from the cache must exec a platform binary: csops CS_OPS_STATUS, bit CS_PLATFORM_BINARY). Our programs are
+ad hoc signed by ldid -S, which leaves the code directory's flags 0, and the kernel's AMFI stand-in marked only
+CS_ADHOC ones as platform. It now takes a signature with no CMS signer as ad hoc (kern_minimac.c). The 8a never met
+this: with Apple's cache hidden its jobs were not cache jobs. (Also seen, not fatal: com.hakios.thermalstate's
+executable missing.)
 
 1. `darwin-write.py`: the root volume and the cryptexes into `darwin`, read back and compared; the data volume made.
 2. Boot as now, `fastboot boot`, with `root_apfs=ufs_darwin var_hfs=ufs_darwin_data ufs=2` (the shiba configuration's
