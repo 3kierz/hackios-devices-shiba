@@ -134,7 +134,16 @@ the primary; carve.py is to be run on the real one, which backup.py copies.)
 `devices/shiba/backups/20261123/` (ignored by git). `carve.py` on the real tables, 32 GiB: the table is the planned one;
 the new one (64 entries; userdata LBA 2449894..22807039, 77.66 GiB; darwin sda35 LBA 22807040..31196154, 32.00 GiB) checks
 out both ways, entries 34-35 the only ones changed; `carve/darwin.json` written. Nothing written to the phone.
-Still yours before phase 3: your own data (0.1), and a way back from fastboot alone checked (0.3).
+**Phase 0.1:** your own data backed up (you, 2026-11-23).
+**Phase 0.3, the way back, checked on the computer, 2026-11-23:** Google's factory image for this phone's build,
+`shiba-cp2a.260805.005-factory-26ca3017.zip` (its SHA-256 begins 26ca3017, as its name says; bootloader
+ripcurrent-17.0-15199481, the phone's own). `flash-all.sh` needs fastboot alone: `flash bootloader`, `flash radio`,
+`-w update image-...zip`. The bootloader image (FBPK v2, zuma) carries `partition:0`..`partition:3`, the four LUNs'
+layouts (Google's FBPT: size, name, type and unique GUID of each entry) from which the bootloader writes their GPTs, and
+they are this phone's tables: LUN 0's 34 entries the same in name, type GUID, unique GUID and size, userdata flagged to
+fill the unit; LUNs 1-3 the same once sizes are rounded up to whole 4 KB blocks. So `flash-all` puts LUN 0's original
+table back (darwin gone, userdata whole again) with Android. Read from the image, not tried on the phone. A second way
+back: the proven copies of LUN 0's first and last 8 blocks (backups/20261123), written back with dd from a root shell.
 
 ## Phase 3: the partition (the one destructive step, your decision)
 
