@@ -261,6 +261,11 @@ reading FeatureFlags plists) the kernel entered the debugger with no panic text 
 writes the reason of every debugger entry (op, message, panic string, caller) into that log; the trace is off again.
 **Seventeenth boot:** "debugger entered: op 3, message panic, panic string `userspace panic: %s`" -- launchd itself asked
 for the panic (reboot with RB_PANIC|RB_QUICK and its own message). The kernel now writes that message into the log too.
+**Eighteenth boot:** launchd's message: "Userspace reboot changed system version: previous  != current 20G81". Read in
+launchd (REA could not analyse it here: no Mach-O backend on this Windows machine; llvm-objdump instead): on a normal
+start launchd sets kern.osproductversion and kern.osversion from SystemVersion.plist; on a user-space reboot it reads
+kern.osversion -- set by the launchd before -- and compares. HakiOS's init (local) now sets both from the Darwin
+volume's SystemVersion.plist before it execs launchd, as that launchd would have.
 
 1. `darwin-write.py`: the root volume and the cryptexes into `darwin`, read back and compared; the data volume made.
 2. Boot as now, `fastboot boot`, with `root_apfs=ufs_darwin var_hfs=ufs_darwin_data ufs=2` (the shiba configuration's
