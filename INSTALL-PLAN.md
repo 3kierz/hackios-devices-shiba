@@ -516,6 +516,15 @@ tx FIFOs would not flush, five re-inits, the trap; the recovery failed. Back to 
 this firmware with aggregation; it loads the calibration, CLM and txcap by the phone's SKU (dhd_custom_google.c:
 sku_table -> MMW, ROW, NA, JPN, EU; /vendor/firmware has bcmdhd.cal_/bcmdhd_clm.blob_ NA, ROW, JP, MMW and
 bcmdhd_txcap.blob_MMW), not the _4398_d0 ones used here. The SKU is the next thing to read (ro.boot.hardware.sku).
+**The SKU:** G9BQD, revision MP1.0 -> "NA". Its files are the very bytes loaded here (bcmdhd.cal_NA = _USI_G5SN_9957_V17,
+bcmdhd_clm.blob_NA = _4398_d0; NA has no txcap of its own), and Google's driver takes "NA" for "unknown" and skips
+SKU-named files anyway: the files are not why. The PHYTX errors were on 1900-2200-byte frames, which only A-MSDU makes;
+two narrower settings: wifi_noagg=2 (A-MSDU off, A-MPDU both ways) and =3 (A-MSDU off, "ampdu_tx" 0, "ampdu_rx" 1).
+**Run 23 (wifi_noagg=2):** 649 MB received in ~10 min, no PHYTX error, no trap; then the phone reset by itself as a
+video was about to start (no panic in the log, USB dropping repeatedly before). Not shown to be Wi-Fi.
+**Run 24 (wifi_noagg=3):** the firmware took all three settings (0, 0, 0); joined; YouTube played (one video refused
+"error licensing": DRM, FairPlay, not here); no PHYTX error, no trap, no reset. It is the image now (wifi_noagg=3 in
+place of 1 in the arguments above). =2 to be tried again when the reset of run 23 is understood.
 
 1. `darwin-write.py`: the root volume and the cryptexes into `darwin`, read back and compared; the data volume made.
 2. Boot as now, `fastboot boot`, with `root_apfs=ufs_darwin var_hfs=ufs_darwin_data ufs=2` (the shiba configuration's
