@@ -452,6 +452,13 @@ a USB CDC-ACM serial console beside usbmux (hakios.akita_serial.c). Neither carr
 **Wi-Fi, the stall after a join:** en0 is 1500 bytes of MTU, no offloads (hakios.net.c), so the PHYTX errors' frames
 of 1900-2200 bytes are the firmware's own aggregates, and its dump was the aggregation queue manager's (AQM). Next boot:
 boot-arg wifi_noagg=1 ("amsdu" 0, "ampdu" 0 before WLC_UP), and en0's sends counted by ethertype with the longest.
+**Run 14 (wifi_noagg=1):** no PHYTX error at all, but a halt 2 s after the join -- now a clean trap: TRAP 4 (data
+abort), dfar 0, pc 0x3bd468 lr 0x3bd79b. Through fw_bcmdhd.map_4398_d0: txq_hw_fill <- wlc_txq_fill <- wlc_sendpkt_ext
+<- wl_send <- pciedev_handle_h2d_msg_txsubmit: a NULL read while queueing a frame from our flow ring, right after the
+firmware's supplicant keyed the link. 363 frames posted in those 2 s. The tx post's fields are Google's
+(dhd_prot_txdata: 802.3, prio << 5, one segment, data after the Ethernet header, phase 0); its station-mode flow ring
+is one per priority with the first frame's destination, as ours. Next boot: each of the first 24 frames said as it is
+sent, and the totals in the halt report.
 
 1. `darwin-write.py`: the root volume and the cryptexes into `darwin`, read back and compared; the data volume made.
 2. Boot as now, `fastboot boot`, with `root_apfs=ufs_darwin var_hfs=ufs_darwin_data ufs=2` (the shiba configuration's

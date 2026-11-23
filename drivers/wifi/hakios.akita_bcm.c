@@ -205,6 +205,7 @@ static struct core {
 	uint32_t dmp, node[6], addr[4];
 	uint8_t nodes, addrs;
 } cores[CORES_MOST];
+static void tx_stats_say(const char *when);
 static unsigned core_count;
 static uint32_t ram_base, ram_size;
 
@@ -1187,6 +1188,7 @@ mb_data_check(void)
 		    mb.r[RING_D2H_RXCPL], mb.w[RING_H2D_CTRL], h2d_read_index(RING_H2D_CTRL), mb.w[RING_H2D_RXPOST],
 		    h2d_read_index(RING_H2D_RXPOST), mb.idx[mb.h2d_w + 2], mb.idx[mb.h2d_r + 2], mb.rx_posted, mb.rx_frames,
 		    mb.events);
+		tx_stats_say("at the halt");
 		printf("wifi: the firmware's console, its last words (pcie_shared flags 0x%08x):\n", mem_rd(mb.shared + SHARED_FLAGS));
 		console_say(mb.shared);
 		if (recover_call != NULL && recover_max != 0) {
@@ -2862,6 +2864,14 @@ flow_create(const uint8_t *da)
 static uint32_t tx_len_max, tx_type_count[8];
 static uint16_t tx_types[8];
 
+static void
+tx_stats_say(const char *when)
+{
+	printf("wifi: en0, %s: %u frames sent, the longest %u bytes; by ethertype: %04x %u, %04x %u, %04x %u, %04x %u, %04x %u, "
+	    "%04x %u\n", when, tx.sent, tx_len_max, tx_types[0], tx_type_count[0], tx_types[1], tx_type_count[1], tx_types[2],
+	    tx_type_count[2], tx_types[3], tx_type_count[3], tx_types[4], tx_type_count[4], tx_types[5], tx_type_count[5]);
+}
+
 static bool
 en0_transmit(mbuf_t packet, size_t length)
 {
@@ -2911,6 +2921,22 @@ en0_transmit(mbuf_t packet, size_t length)
 
 		if (length > tx_len_max) {
 			tx_len_max = (uint32_t)length;
+		}
+		if (tx.sent <= 24) {
+			/* the first frames after a join, one line each: what reaches the chip just before it halted (no addresses) */
+			uint8_t ip[24];
+			unsigned proto = 0, port = 0;
+
+			if (et == 0x0800 && length >= 14 + 24 && mbuf_copydata(packet, 14, 24, ip) == 0) {
+				unsigned ihl = (ip[0] & 0xfu) * 4;
+
+				proto = ip[9];
+				if (ihl >= 20 && ihl + 4 <= sizeof(ip)) {
+					port = (unsigned)(ip[ihl + 2] << 8 | ip[ihl + 3]);
+				}
+			}
+			printf("wifi: en0: sent #%u: %zu bytes, ethertype %04x, to %s; IP protocol %u, destination port %u\n", tx.sent,
+			    length, et, head[0] == 0xff ? "broadcast" : (head[0] & 1) ? "multicast" : "unicast", proto, port);
 		}
 		for (k = 0; k < 8 && tx_type_count[k] != 0 && tx_types[k] != et; k++) {
 		}
