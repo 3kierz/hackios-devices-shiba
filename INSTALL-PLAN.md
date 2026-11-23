@@ -270,6 +270,13 @@ volume's SystemVersion.plist before it execs launchd, as that launchd would have
 start: the kernel never returned to the loader (a hang a watchdog caught, or a restart asked for), so how far launchd got
 is unknown. A local kernel change: boot-arg `bldrlog=0xfd800000` copies the kernel's console, as it goes, into the
 bootloader's log buffer (the one U-Boot appends to, which survives a reset and Android hands back); on from now.
+**Twentieth boot (the console copy works):** launchd gets past its version check and runs its boot tasks, skipping
+most (a user-space reboot), then "keybag": MKB_INIT "Could not open /private/var/keybags/systembag.kb ... Can't load the
+keybag. tears in rain... Time to die ... Rebooting" (the run about 20 s shorter, as seen on the screen). On a
+user-space reboot launchd expects the keybag the first boot made. So that route is dropped (kept behind boot-arg
+init_userspace_reboot): the kernel's graftdmg now takes an already-mounted cryptex as grafted (success, not EALREADY),
+the stand-in AMFI accepts the trust cache libignition then loads (__mac_syscall AMFI 101), the apticket stand-in is
+not empty (it is mapped), and launchd starts as on a normal first boot.
 
 1. `darwin-write.py`: the root volume and the cryptexes into `darwin`, read back and compared; the data volume made.
 2. Boot as now, `fastboot boot`, with `root_apfs=ufs_darwin var_hfs=ufs_darwin_data ufs=2` (the shiba configuration's
