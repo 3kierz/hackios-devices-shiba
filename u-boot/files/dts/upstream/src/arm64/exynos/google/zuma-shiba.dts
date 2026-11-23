@@ -71,10 +71,14 @@
 	};
 
 	/*
-	 * Not here yet: USB (the DWC3 at 0x11210000 and its eUSB repeater on hsi2c@10CB0000) and UFS (ufs@13200000). The
-	 * Pixel 8a's U-Boot had drivers of its own for them that were never published; HakiOS's first boot needs neither (the
-	 * loader and its payload come in the boot image). They come back here with those drivers.
+	 * The storage: the UFS host controller (Android's tree: ufs@13200000), its standard UFSHCI registers. Google's
+	 * bootloader leaves it up (zuma ufs, 2026-11-23: enabled, the device present, both lists running); U-Boot adopts it as
+	 * it is and only reads (board/samsung/exynos-mobile/hakios_zuma_ufs.c). Not here yet: USB (the DWC3 at 0x11210000).
 	 */
+	ufs@13200000 {
+		compatible = "hakios,zuma-ufs";
+		reg = <0x0 0x13200000 0x0 0x200>;
+	};
 
 	reserved-memory {
 		#address-cells = <2>;

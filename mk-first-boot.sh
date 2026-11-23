@@ -64,11 +64,10 @@ if [ -n "${UBOOT_ENV:-}" ]; then
 	echo "mk-first-boot.sh: U-Boot environment added:"; echo "$UBOOT_ENV" | sed 's/^/  /'
 fi
 # the zuma pieces in the generic Exynos phone board (hakios_zuma.c built, U-Boot's load address noted): once
-if git -C u-boot apply --check "$here/u-boot/zuma.patch" 2>/dev/null; then
-	git -C u-boot apply "$here/u-boot/zuma.patch"
-elif ! git -C u-boot apply --check -R "$here/u-boot/zuma.patch" 2>/dev/null; then
-	echo "mk-first-boot.sh: u-boot/ takes neither devices/shiba/u-boot/zuma.patch nor its reverse" >&2; exit 1
-fi
+# (the board's own files back to upstream's first, so that the patch as it is now goes onto them, whatever was applied before)
+git -C u-boot checkout -q -- board/samsung/exynos-mobile/exynos-mobile.c board/samsung/exynos-mobile/Makefile \
+	board/samsung/exynos-mobile/Kconfig
+git -C u-boot apply "$here/u-boot/zuma.patch" || { echo "mk-first-boot.sh: devices/shiba/u-boot/zuma.patch does not apply" >&2; exit 1; }
 grep -q hk_load_base u-boot/cmd/hakios.c ||
 	{ echo "mk-first-boot.sh: uefi/ has no hakios load for a container behind U-Boot (oosexgang/hakios-uefi pull request 2)" >&2; exit 1; }
 uefi/u-boot/build.sh shiba

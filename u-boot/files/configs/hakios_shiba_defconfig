@@ -35,6 +35,15 @@ CONFIG_HUSH_PARSER=y
 CONFIG_CMD_HAKIOS=y
 CONFIG_CMD_BOOTEFI=y
 CONFIG_CMD_SMC=y
+# the phone's storage, READ ONLY (hakios_zuma_ufs.c: the UFS controller adopted as the bootloader leaves it), as SCSI
+# disks (one a LUN), their GPTs, and through U-Boot's EFI layer block devices the loader can read
+CONFIG_SCSI=y
+CONFIG_CMD_SCSI=y
+CONFIG_PARTITIONS=y
+CONFIG_EFI_PARTITION=y
+CONFIG_PARTITION_TYPE_GUID=y
+CONFIG_CMD_PART=y
+CONFIG_CMD_CRC32=y
 # how long each step takes, and the caches (time, icache, dcache)
 CONFIG_CMD_TIME=y
 CONFIG_CMD_CACHE=y

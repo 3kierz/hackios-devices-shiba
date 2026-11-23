@@ -15,14 +15,14 @@ index ed7d16b8..e4508dbe 100644
 +
  endif # TARGET_EXYNOS_MOBILE
 diff --git a/board/samsung/exynos-mobile/Makefile b/board/samsung/exynos-mobile/Makefile
-index e049ed21..8c4a1bab 100644
+index e049ed21..fe54fb83 100644
 --- a/board/samsung/exynos-mobile/Makefile
 +++ b/board/samsung/exynos-mobile/Makefile
 @@ -3,3 +3,4 @@
  # Copyright (C) 2025 Kaustabh Chakraborty <kauschluss@disroot.org>
  
  obj-y := exynos-mobile.o
-+obj-$(CONFIG_HAKIOS_ZUMA) += hakios_zuma.o
++obj-$(CONFIG_HAKIOS_ZUMA) += hakios_zuma.o hakios_zuma_ufs.o
 diff --git a/board/samsung/exynos-mobile/exynos-mobile.c b/board/samsung/exynos-mobile/exynos-mobile.c
 index 6b2b1523..ec6ca19e 100644
 --- a/board/samsung/exynos-mobile/exynos-mobile.c
