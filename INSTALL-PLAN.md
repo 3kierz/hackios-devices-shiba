@@ -182,6 +182,9 @@ RAM system image that stalled is not made; theos clang via XNU_CLANG_DIR): flash
 ufs_write=1 nothing is written at boot; /private/var is a memory filesystem (init's fallback when var_hfs does not mount).
 The write itself: `fastboot flash darwin` of sparse pieces (tools/sparse-split.py), the bootloader bounding it to darwin;
 read back from Android's root shell and compared with the image's SHA-256.
+**Written, 2026-11-23 (your go-ahead):** fastboot (bootloader, max-download-size 0xf900000): 35 sparse pieces,
+`fastboot flash darwin` each, all OKAY. Back in Android, as root: darwin's first 2,208,768 blocks hash
+3b6721d5... -- the image's. `protected_blocks` set to 2208768 in darwin.json: darwin-write.py never writes them again.
 
 1. `darwin-write.py`: the root volume and the cryptexes into `darwin`, read back and compared; the data volume made.
 2. Boot as now, `fastboot boot`, with `root_apfs=ufs_darwin var_hfs=ufs_darwin_data ufs=2` (the shiba configuration's
