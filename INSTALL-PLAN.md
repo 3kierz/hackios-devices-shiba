@@ -234,6 +234,10 @@ subdirectory: cryptex1/current ... failed to open object directory: 2". Its obje
 os.dmg.root_hash, os.dmg.trustcache, an apticket...im4m, and app.* the same; then graftdmg, whose failure is ignored when
 the graft point already has content ("cryptex content already available"), as ours does. Next: an empty
 cryptex1/current, so that libignition lists which objects it requires.
+**Eleventh boot:** "object absence permitted: apticket.d16ap.im4m"; "object not present: os.dmg ... failed to open object:
+os hyper dmg: 2" -- os.dmg is required. Empty stand-ins now (os.dmg, os.dmg.root_hash, app.dmg, app.dmg.root_hash; no
+trust caches): the graft itself fails (graftdmg asks the dmg's filesystem, this kernel's APFS: ENOTTY) and Apple's code
+ignores that when the graft point already has content, as ours does.
 
 1. `darwin-write.py`: the root volume and the cryptexes into `darwin`, read back and compared; the data volume made.
 2. Boot as now, `fastboot boot`, with `root_apfs=ufs_darwin var_hfs=ufs_darwin_data ufs=2` (the shiba configuration's
