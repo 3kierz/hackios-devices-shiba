@@ -199,6 +199,12 @@ the placeholder (no IPSW when it was first made); `xnuloader/mkidentity.sh` made
 query, then dyld: "Library not loaded: /usr/lib/libSystem.B.dylib ... (no such file, no dyld cache)" -- no shared cache
 mapped, and no `shared_region: ... map` refusal in the log (the kernel's APFS reads LZBITMAP, so not the compression).
 Why is earlier in the log than the loader's 16 KB excerpt shows; a local loader option `klog_echo=all` prints all of it.
+**Fourth boot (klog_echo=all), 2026-11-23:** init's checks: 45 of 46 pass -- Darwin volume mounted from darwin and made
+the root, both cryptexes on /private/preboot/Cryptexes/OS and App, /private/var in memory. The one failure: "run a
+program through dyld and the shared cache" (hello_dyn: execve "Unknown error"). launchd's dyld asks twice for a shared
+region (check_np) and never asks to map one: its own checks of the arm64e cache fail first. Lead, not yet followed: the
+kernel's user pointer authentication (osfmk/arm64/hakios_pac.c, boot-arg hakios_pac, off by default) -- the arm64e
+userland and its shared cache are PAC-signed; how the 8a ran 16.6.1 d16ap with it is to be found next.
 
 1. `darwin-write.py`: the root volume and the cryptexes into `darwin`, read back and compared; the data volume made.
 2. Boot as now, `fastboot boot`, with `root_apfs=ufs_darwin var_hfs=ufs_darwin_data ufs=2` (the shiba configuration's
