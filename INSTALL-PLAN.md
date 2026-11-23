@@ -371,6 +371,11 @@ bcmdhd.cal_USI_G5SN_9957_V17 (bcm94398d0GGmodUSIG5SN), now in fw-wifi/; the d0 f
 SHA-256). userland/build.sh packs the 4398's files (2.2 MB); steps 3 and 4 are shared with the 4383's: the firmware at
 0x2a0000 read back, the calibration below the top with its token, the random seed, the reset vector at 0; the CA7 let
 go by clearing its halt bit; the shared area's address awaited in the top word. Next boot: wifi=4.
+**Wi-Fi 4: the BCM4398's firmware runs.** 2118969 bytes at 0x2a0000, read back with 0 words different; the reset
+vector written at 0 (no secure-boot lock); the CA7 let go; pcie_shared's address 0x453b94 in the top word after 44 ms,
+flags 0x109 (protocol 9, asserts built, no trap). Its fields were still 0: from PCIe core rev 68 the firmware says it
+is up with a boot interrupt, which Google's driver waits for (5 s) before reading pcie_shared; step 4 now polls the
+mailbox interrupt status and the ring information's address for it.
 
 1. `darwin-write.py`: the root volume and the cryptexes into `darwin`, read back and compared; the data volume made.
 2. Boot as now, `fastboot boot`, with `root_apfs=ufs_darwin var_hfs=ufs_darwin_data ufs=2` (the shiba configuration's

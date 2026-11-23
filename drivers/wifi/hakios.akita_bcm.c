@@ -4326,6 +4326,32 @@ step3:
 		}
 		shared = v;
 	}
+	if (chip_4398) {
+		/*
+		 * The 4398 puts pcie_shared's address in the top word early (44 ms; its fields still 0) and says it is up with an
+		 * interrupt (Google's driver: from PCIe core rev 68 "FW issues boot interrupt upon boot complete", waited for
+		 * up to FWBOOT_INTR_TIMEOUT_MS, 5 s, before pcie_shared is read). Polled here: the PCIe core's mailbox
+		 * interrupt status, or the ring information's address in pcie_shared.
+		 */
+		uint64_t t0 = mach_absolute_time(), us;
+		uint32_t mb = 0, ri = 0;
+
+		while ((us = micros_since(t0)) < 5000000) {
+			mb = pcie_rd(PCIE_MAILBOX_INT);
+			ri = mem_rd(shared + SHARED_RING_INFO_ADDR);
+			if (mb != 0 || ri != 0) {
+				break;
+			}
+			sleep_ms(5);
+		}
+		printf("wifi: 4: after %llu ms: mailbox interrupt status 0x%08x, ring information at 0x%08x%s\n", us / 1000, mb,
+		    ri, mb == 0 && ri == 0 ? " (no boot interrupt in 5 s)" : "");
+		if (ri == 0) {
+			sleep_ms(100);
+			ri = mem_rd(shared + SHARED_RING_INFO_ADDR);
+			printf("wifi: 4: 100 ms later: ring information at 0x%08x\n", ri);
+		}
+	}
 	{
 		uint32_t flags = mem_rd(shared + SHARED_FLAGS);
 
