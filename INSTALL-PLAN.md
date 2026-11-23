@@ -165,7 +165,9 @@ restarted. `darwin.json` copied to devices/shiba/boot-info/ (ignored by git) for
 
 **After phase 3, from the new Android (the ColorOS port, set up again), 2026-11-23:** sysfs, without root, says what was
 carved: sda34 userdata from LBA 2449894, 20,357,146 blocks; sda35 `darwin` from LBA 22807040, 8,389,115 blocks;
-/dev/block/by-name/darwin -> sda35; /data made at the new size (78 GB). Root (KernelSU) to be set up again before phase 4.
+/dev/block/by-name/darwin -> sda35; /data made at the new size (78 GB). With root back (KernelSU): `darwin-write.py check`
+says darwin is what was carved (sda35 of LUN 0 behind 13200000.ufs, its LBAs, type and GUID), and `selftest` on the phone
+refuses every changed GPT and every range outside darwin. (Windows' adb.exe ends lines with CR: the wrapper strips it.)
 
 ## Phase 4: iOS on the partition
 

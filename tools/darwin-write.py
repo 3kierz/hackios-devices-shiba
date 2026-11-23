@@ -45,6 +45,14 @@ def load(path):
     # null: nothing is writable (every block is "inside the Darwin volume") until phase 4 says where it ends
     tool.PROTECTED = tool.BLOCKS if protected is None else int(protected)
     upstream_identity = tool.identity
+    upstream_phone = tool.phone
+
+    def phone(script, binary=False):
+        """that tool's phone(), with the carriage returns Windows' adb.exe puts at the end of each line taken out of
+        text (binary output, and exec-out's raw reads, are left as they are)"""
+        out = upstream_phone(script, binary)
+        return out if binary else out.replace('\r\n', '\n').replace('\r', '')
+    tool.phone = phone
 
     def identity():
         """that tool's identity(), with the Pixel's UFS controller in sysfs in place of the POCO's ufshc"""
