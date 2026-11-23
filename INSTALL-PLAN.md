@@ -266,6 +266,10 @@ launchd (REA could not analyse it here: no Mach-O backend on this Windows machin
 start launchd sets kern.osproductversion and kern.osversion from SystemVersion.plist; on a user-space reboot it reads
 kern.osversion -- set by the launchd before -- and compares. HakiOS's init (local) now sets both from the Darwin
 volume's SystemVersion.plist before it execs launchd, as that launchd would have.
+**Nineteenth boot:** no kernel log came back at all -- the record ends at the loader's "jumping to", then the next
+start: the kernel never returned to the loader (a hang a watchdog caught, or a restart asked for), so how far launchd got
+is unknown. A local kernel change: boot-arg `bldrlog=0xfd800000` copies the kernel's console, as it goes, into the
+bootloader's log buffer (the one U-Boot appends to, which survives a reset and Android hands back); on from now.
 
 1. `darwin-write.py`: the root volume and the cryptexes into `darwin`, read back and compared; the data volume made.
 2. Boot as now, `fastboot boot`, with `root_apfs=ufs_darwin var_hfs=ufs_darwin_data ufs=2` (the shiba configuration's
