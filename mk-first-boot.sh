@@ -64,8 +64,11 @@ args=${FIRST_ARGS-$(python3 tools/hakios-config.py args)}
 # space's architecture (arm64e for 16.6.1 d16ap); harmless for an arm64 one (the 8a's bootrun.sh always gives it)
 case "$args" in *hakios_arm64e=*) ;; *) args="$args hakios_arm64e=1";; esac
 echo "mk-first-boot.sh: kernel $(strings hakios-kernel | grep -m1 'Darwin Kernel Version' | cut -c1-90)"
-echo "mk-first-boot.sh: arguments: -v $args"
-xnuloader/mkpayload.py -o "$out/payload.bin" kernel=hakios-kernel $disks --cmdline "-v $args"
+# QUIET=1: no -v -- the kernel's log is not shown on the screen (iOS's Apple logo, then its own screens); it is still in
+# the kernel's buffer, which devices/shiba/tools/usbmux-log.py -k reads over the cable while iOS runs
+verbose=-v; [ -n "${QUIET:-}" ] && verbose=
+echo "mk-first-boot.sh: arguments: ${verbose:+$verbose }$args"
+xnuloader/mkpayload.py -o "$out/payload.bin" kernel=hakios-kernel $disks --cmdline "${verbose:+$verbose }$args"
 
 [ -d u-boot ] || uefi/u-boot/apply.sh
 cp -r "$here/u-boot/files/." u-boot/          # this device's U-Boot files, as apply.sh does at the start
