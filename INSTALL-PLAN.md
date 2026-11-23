@@ -310,6 +310,10 @@ bootloader reports no console-ramoops. Next: end a run with a software restart (
 Early", SYSTEM_SWRESET). The panic runs, whose logs came back, ended through the loader and then a button reset
 (PIN_RESET). With loader_return_after=0 (the timer off, only present) AKITA_POWER leaves Restart to that same way back
 to the loader: the screen stalls, the power button is held, and the log should be kept.
+**Twenty-eighth boot:** Restart went to the loader (the shutdown spinner stayed), but the log was lost again: the
+loader arms a 30 s watchdog after the kernel returns (WDT_BITE_MS), and it bit first (CLUSTER0_NONCPU_WDTRESET).
+Every run so far: a button reset (PIN_RESET) kept the HakiOS log; a watchdog or software reset (SYSTEM_SWRESET)
+did not. So: once the screen stops, hold the power button within about 20 s.
 
 1. `darwin-write.py`: the root volume and the cryptexes into `darwin`, read back and compared; the data volume made.
 2. Boot as now, `fastboot boot`, with `root_apfs=ufs_darwin var_hfs=ufs_darwin_data ufs=2` (the shiba configuration's
