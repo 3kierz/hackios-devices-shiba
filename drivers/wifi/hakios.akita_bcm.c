@@ -2733,7 +2733,7 @@ network_file(uint8_t *name, unsigned *name_length, uint8_t *passphrase, unsigned
 #define FLOW_ITEMS              512             /* brcmfmac's BRCMF_H2D_TXFLOWRING_MAX_ITEM and ITEMSIZE */
 #define FLOW_ITEM_SIZE          48
 #define FLOW_H2D_INDEX          2               /* the first flow ring: H2D ring 2 (after control and rx post) */
-#define TX_BUFS                 128
+#define TX_BUFS                 256             /* (128 until 2026-11-24: 3768 refused with all full, run 20) */
 #define TX_BUF_SIZE             2048
 #define TX_ID_BASE              0x1000
 
@@ -2883,7 +2883,7 @@ tx_stats_say(const char *when)
  * them) and is posted as the chip gives buffers back (tx_drain, from d2h_tx_poll); only with every buffer full is
  * one refused.
  */
-static uint8_t txq_b[TX_BUFS];
+static uint16_t txq_b[TX_BUFS];
 static uint16_t txq_len[TX_BUFS];
 static unsigned txq_head, txq_count, txq_most;
 
@@ -2980,7 +2980,7 @@ en0_transmit(mbuf_t packet, size_t length)
 
 		if (txq_count != 0 || (cap != 0 && tx.outstanding >= cap) || !tx_post_buf(b, (unsigned)length)) {
 			/* (past the limit, or the ring full: it waits in its buffer, posted by tx_drain) */
-			txq_b[(txq_head + txq_count) % TX_BUFS] = (uint8_t)b;
+			txq_b[(txq_head + txq_count) % TX_BUFS] = (uint16_t)b;
 			txq_len[(txq_head + txq_count) % TX_BUFS] = (uint16_t)length;
 			txq_count++;
 			if (txq_count > txq_most) {

@@ -25,9 +25,9 @@
  *   torch=2    ... and the light on once, LED1 at torch_ma= (default 50) for torch_secs (2), the flags read, then off
  *   torch=3    the light for Darwin until the run ends: /dev/hakios-torch takes 0 to 1000 (a 32-bit number, thousandths
  *              of torch_max_ma, default 100 mA, never more than 150) and the LED is set to it; a read gives what is lit
- * Limits whatever asks: at most torch_max_s (30, never more than 120) on at a time, then off until asked anew (0 first);
- * while on, the chip's flags ten times a second and the skin temperature (off above 45 C): a fault, a read or write
- * that fails, and the light goes off for the rest of the run. Off at the run's end and on a panic's way out.
+ * Limits whatever asks: at most torch_max_s (600, never more than 1800) on at a time, then off until asked anew (0
+ * first); while on, the chip's flags ten times a second and the skin temperature: a fault in the flags, or the flags
+ * unreadable for half a second, and the light goes off for the rest of the run; the skin over 45 C, off until under 42. Off at the run's end and on a panic's way out.
  */
 #include <kern/clock.h>
 #include <kern/locks.h>
@@ -395,21 +395,34 @@ light(uint32_t ma)
 /* a fault: the flags (read clears them), the skin */
 extern int akita_thermal_skin_mc(void) __attribute__((weak));
 
-static bool
+/*
+ * What is wrong while the light is on: 0 nothing, 1 the chip's flags (a fault: off for the rest of the run), 2 the skin
+ * over 45 C (off until it is under 42 C), 3 the flags could not be read three times running. (The Pixel 8, 2026-11-24:
+ * one failed read, the skin at 40 C and no flag set, put the light out for the rest of the run: a read is tried three
+ * times now, and only five such looks in a row -- half a second -- count.)
+ */
+static int
 trouble(uint8_t *f1, uint8_t *f2)
 {
 	int skin = akita_thermal_skin_mc ? akita_thermal_skin_mc() : 0;
+	bool read = false;
 
-	if (!get(REG_FLAGS1, f1) || !get(REG_FLAGS2, f2)) {
-		return true;
+	for (unsigned i = 0; i < 3 && !read; i++) {
+		read = get(REG_FLAGS1, f1) && get(REG_FLAGS2, f2);
 	}
-	return (*f1 & 0x7e) != 0 || (*f2 & 0x1f) != 0 || skin > 45000;
+	if (!read) {
+		return 3;
+	}
+	if ((*f1 & 0x7e) != 0 || (*f2 & 0x1f) != 0) {
+		return 1;
+	}
+	return skin > 45000 ? 2 : 0;
 }
 
 /* ---- torch=3: the light for Darwin ---------------------------------------------------------------------------------- */
 
 static volatile uint32_t wanted;                /* 0 to 1000 */
-static uint32_t max_secs = 30;
+static uint32_t max_secs = 600;          /* (30 until 2026-11-24: iOS's flashlight stays on until it is turned off) */
 
 static int
 torch_write(__unused dev_t dev, struct uio *uio, __unused int ioflag)
@@ -477,7 +490,8 @@ serve(void)
 {
 	uint32_t applied = 0;
 	uint64_t since = 0, looked = 0;
-	bool cut = false;
+	bool cut = false, hot = false;
+	unsigned misreads = 0;
 
 	printf("akita torch: the light is Darwin's (/dev/hakios-torch): at most %u mA, %u s at a time\n", max_ma, max_secs);
 	while (!broken) {
@@ -488,7 +502,7 @@ serve(void)
 		if (want == 0) {
 			cut = false;
 		}
-		if (cut) {
+		if (cut || hot) {
 			want = 0;
 		}
 		if (want != 0 && applied != 0 && now - since >= max_secs * 1000ull) {
@@ -508,13 +522,24 @@ serve(void)
 			applied = want;
 			level = want;
 		}
+		if (hot && (akita_thermal_skin_mc ? akita_thermal_skin_mc() : 0) < 42000) {
+			hot = false;
+			printf("akita torch: the skin under 42 C: the light may come on again\n");
+		}
 		if (applied != 0 && now - looked >= 100) {
+			int t;
+
 			looked = now;
-			if (trouble(&f1, &f2)) {
-				printf("akita torch: flags %#x/%#x (or a read failed, or the skin too warm): off for the rest of the run\n",
-				    f1, f2);
+			t = trouble(&f1, &f2);
+			misreads = t == 3 ? misreads + 1 : 0;
+			if (t == 1 || (t == 3 && misreads >= 5)) {
+				printf("akita torch: %s (flags %#x/%#x): off for the rest of the run\n",
+				    t == 1 ? "a fault in the chip's flags" : "its flags unreadable for half a second", f1, f2);
 				(void)dark();
 				broken = true;
+			} else if (t == 2) {
+				printf("akita torch: the skin over 45 C: off until it is under 42 C\n");
+				hot = true;
 			}
 		}
 		delay_for_interval(20, NSEC_PER_MSEC);
@@ -635,7 +660,7 @@ akita_torch_init(void)
 	PE_parse_boot_argn("torch_max_ma", &max_ma, sizeof(max_ma));
 	max_ma = max_ma < 10 ? 10 : max_ma > 150 ? 150 : max_ma;
 	PE_parse_boot_argn("torch_max_s", &max_secs, sizeof(max_secs));
-	max_secs = max_secs < 1 ? 1 : max_secs > 120 ? 120 : max_secs;
+	max_secs = max_secs < 1 ? 1 : max_secs > 1800 ? 1800 : max_secs;
 	cmu = ml_io_map(CMU_PERIC0_PHYS, 0x4000);
 	sysreg = ml_io_map(SYSREG_PERIC0_PHYS, 0x1000);
 	gpio0 = ml_io_map(GPIO_PERIC0_PHYS, 0x1000);
