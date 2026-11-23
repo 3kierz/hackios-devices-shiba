@@ -3,9 +3,12 @@
  * The Pixel 8's storage (UFS) for U-Boot's SCSI layer, READ ONLY: the controller adopted as Google's bootloader leaves it.
  *
  * Read on the phone (zuma ufs, 2026-11-23): UFSHCI 3.0 at 0x13200000, enabled, the device present, both request lists
- * running and ready, nothing in flight, the PHY out of isolation -- the link is up. So nothing here resets, starts a link,
- * sends a UIC command or changes a clock or a power: the only registers written are the transfer request list's (its run
- * bit and base, while nothing is in flight, exactly as the kernel's drivers/storage/hakios.ufshc.c does) and the doorbell.
+ * running and ready, nothing in flight, the PHY out of isolation -- the link is up, but asleep: the bootloader's last UIC
+ * command was DME_HIBERNATE_ENTER (UICCMD 0x17), and every request stayed in its slot until the link was woken. So the
+ * one UIC command sent here is DME_HIBERNATE_EXIT, and only when the last one was that ENTER -- what the bootloader does
+ * itself before it reads. Nothing resets, starts a link, or changes a clock or a power; the other registers written are
+ * the transfer request list's (its run bit and base, while nothing is in flight, as the kernel's hakios.ufshc.c does)
+ * and the doorbell.
  *
  * One request at a time, in slot 0 of a list of our own, polled. Every command is checked before it goes into the slot,
  * as the kernel's driver checks them (hc_refusal): a SCSI command (no query, task management or NOP), never the W flag,
@@ -46,6 +49,15 @@
 #define UFSHC_UTRLDBR		0x58
 #define UFSHC_UTRLCLR		0x5c
 #define UFSHC_UTRLRSR		0x60
+#define UFSHC_UICCMD		0x90
+#define UFSHC_UICCMDARG1	0x94
+#define UFSHC_UICCMDARG2	0x98
+#define UFSHC_UICCMDARG3	0x9c
+#define UIC_HIBERN8_ENTER	0x17
+#define UIC_HIBERN8_EXIT	0x18
+#define HCS_UCRDY		BIT(3)
+#define IS_UHXS			BIT(5)		/* Hibern8 exit done */
+#define IS_UCCS			BIT(10)		/* UIC command done */
 
 #define CAP_64AS		BIT(24)
 #define HCS_DP			BIT(0)
@@ -300,6 +312,29 @@ static int zuma_ufs_probe(struct udevice *dev)
 		wr(u, UFSHC_UTRLRSR, 1);
 		printf("[oosexgang] ufs: not adopted: the controller did not take our list (the bootloader's put back)\n");
 		return -EIO;
+	}
+	/* the link out of Hibern8, if the bootloader left it there */
+	if (rd(u, UFSHC_UICCMD) == UIC_HIBERN8_ENTER) {
+		u32 is, res;
+
+		if (!(rd(u, UFSHC_HCS) & HCS_UCRDY)) {
+			printf("[oosexgang] ufs: the link is in Hibern8 and the UIC is not ready: not woken\n");
+			return -EBUSY;
+		}
+		wr(u, UFSHC_IS, IS_UCCS | IS_UHXS);	/* (write 1 to clear) */
+		wr(u, UFSHC_UICCMDARG1, 0);
+		wr(u, UFSHC_UICCMDARG2, 0);
+		wr(u, UFSHC_UICCMDARG3, 0);
+		wr(u, UFSHC_UICCMD, UIC_HIBERN8_EXIT);
+		for (start = timer_get_us(); !(rd(u, UFSHC_IS) & IS_UHXS) && timer_get_us() - start < 100000;)
+			;
+		is = rd(u, UFSHC_IS);
+		res = rd(u, UFSHC_UICCMDARG2) & 0xff;
+		printf("[oosexgang] ufs: the link out of Hibern8: %s (IS %#x, UIC result %u, HCS %#x: power-mode status %u)\n",
+		       (is & IS_UHXS) && !res ? "done" : "NOT done", is, res, rd(u, UFSHC_HCS), (rd(u, UFSHC_HCS) >> 8) & 7);
+		wr(u, UFSHC_IS, is & (IS_UCCS | IS_UHXS));
+		if (!(is & IS_UHXS) || res)
+			return -EIO;
 	}
 	plat->max_id = 1;
 	plat->max_lun = 8;

@@ -54,7 +54,8 @@ The work that has to come first, and is safe: a U-Boot driver that gives the loa
    power mode switched), both lists running (UTRLRSR 1, the bootloader's list at 0xf8c3a000 in its own reserved memory),
    nothing in flight, the PHY out of isolation. So the first design:
    - **the bootloader leaves it up:** U-Boot adopts the controller as it is (standard UFSHCI: a request list, SCSI
-     READ), with no reset or power change, which is what the 8a's device tree describes (`ufs@13200000`, "takes it over
+     READ), with no reset or power change -- but the link left in Hibern8 (its last UIC command 0x17), so one
+     DME_HIBERNATE_EXIT, as the bootloader sends before it reads, which is what the 8a's device tree describes (`ufs@13200000`, "takes it over
      as it is and resets nothing");
    - **it is powered down:** U-Boot brings it up itself (the device's supply and pins, Samsung's PHY calibration, the
      link to HS gear 4), which is much more work and is what the 8a's environment describes (`ufs-exynos-gs.c`).
