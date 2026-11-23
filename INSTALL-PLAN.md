@@ -376,6 +376,9 @@ vector written at 0 (no secure-boot lock); the CA7 let go; pcie_shared's address
 flags 0x109 (protocol 9, asserts built, no trap). Its fields were still 0: from PCIe core rev 68 the firmware says it
 is up with a boot interrupt, which Google's driver waits for (5 s) before reading pcie_shared; step 4 now polls the
 mailbox interrupt status and the ring information's address for it.
+**Wi-Fi 5 (quiet image, no -v):** the boot interrupt came after 423 ms (mailbox interrupt status 0x1), but
+pcie_shared at the first address then read all zero, its flags too. Google's driver reads the top word again after
+the boot interrupt; step 4 now does, and shows pcie_shared's first 16 words.
 
 1. `darwin-write.py`: the root volume and the cryptexes into `darwin`, read back and compared; the data volume made.
 2. Boot as now, `fastboot boot`, with `root_apfs=ufs_darwin var_hfs=ufs_darwin_data ufs=2` (the shiba configuration's

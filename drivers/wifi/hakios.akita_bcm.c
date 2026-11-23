@@ -4346,10 +4346,32 @@ step3:
 		}
 		printf("wifi: 4: after %llu ms: mailbox interrupt status 0x%08x, ring information at 0x%08x%s\n", us / 1000, mb,
 		    ri, mb == 0 && ri == 0 ? " (no boot interrupt in 5 s)" : "");
-		if (ri == 0) {
+		/*
+		 * (Google's dhdpcie_wait_readshared_area_addr: the top word is read again after the boot interrupt -- the 4398's
+		 * first address was a temporary one: after the interrupt it read all zero, 2026-11-23)
+		 */
+		{
+			uint32_t again = mem_rd(top);
+
+			printf("wifi: 4: the top word after the boot interrupt: 0x%08x (was 0x%08x)\n", again, shared);
+			if (again != shared && again >= ram_base && again < ram_base + ram_size) {
+				shared = again;
+			}
+		}
+		if (mem_rd(shared + SHARED_RING_INFO_ADDR) == 0) {
 			sleep_ms(100);
-			ri = mem_rd(shared + SHARED_RING_INFO_ADDR);
-			printf("wifi: 4: 100 ms later: ring information at 0x%08x\n", ri);
+			printf("wifi: 4: 100 ms later: ring information at 0x%08x, top word 0x%08x\n",
+			    mem_rd(shared + SHARED_RING_INFO_ADDR), mem_rd(top));
+		}
+		{
+			uint32_t w[16];
+
+			for (unsigned i = 0; i < 16; i++) {
+				w[i] = mem_rd(shared + 4 * i);
+			}
+			printf("wifi: 4: pcie_shared's first words: %08x %08x %08x %08x %08x %08x %08x %08x %08x %08x %08x %08x %08x "
+			    "%08x %08x %08x\n", w[0], w[1], w[2], w[3], w[4], w[5], w[6], w[7], w[8], w[9], w[10], w[11], w[12], w[13],
+			    w[14], w[15]);
 		}
 	}
 	{
