@@ -488,6 +488,13 @@ power button: the reset that keeps it.
 **Run 20:** YouTube plays music over Wi-Fi (the tester). 43 MB in, ~16600 frames out, no halt; at most 112 frames
 waiting, 3768 refused with all 128 buffers full. No crash: the same boot at 599 s, backboardd still pid 39; the screen
 went off and on (RequestPowerChange 0/1) -- a lock, not a restart.
+**The GPU for iOS (METAL_PLUGIN=ca):** the iPhone 11's 16.5 (20F66) IPSW from Apple's CDN (SHA-1 3bcbdb42..., as
+ipsw.me lists it), its root volume (096-04258-076.dmg) read by 7-Zip 23.01, QuartzCore.framework/default.metallib
+(1 MB, MTLB) kept in xnu-deps/build/ipsw-20F66/qc (out of git; the IPSW and the dmg deleted); tools/ca-metallib.py with
+CA_QC_METALLIB= that -> ~/ca-share/QuartzCore-default.metallib (141 functions, the uber shaders generic). The user
+space: METAL_PLUGIN=ca EXTRA_SHARE=~/ca-share BIG_IN_ROOT=1 HAKIOS_METAL_OUT=ios-mali (and the switches above); the
+boot: bootrun.sh's GPU=1 arguments -- ca_metallib=/redwood/share/ca-share/QuartzCore-default.metallib display_hz=120
+fbwidth=1080 fbheight=2340 fbscale=3 fbsubtype=2340 fb_zc=1 anim_max=1 (metal=1 metal_all=1 the defaults).
 
 1. `darwin-write.py`: the root volume and the cryptexes into `darwin`, read back and compared; the data volume made.
 2. Boot as now, `fastboot boot`, with `root_apfs=ufs_darwin var_hfs=ufs_darwin_data ufs=2` (the shiba configuration's
