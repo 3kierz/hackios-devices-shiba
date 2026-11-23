@@ -495,6 +495,10 @@ CA_QC_METALLIB= that -> ~/ca-share/QuartzCore-default.metallib (141 functions, t
 space: METAL_PLUGIN=ca EXTRA_SHARE=~/ca-share BIG_IN_ROOT=1 HAKIOS_METAL_OUT=ios-mali (and the switches above); the
 boot: bootrun.sh's GPU=1 arguments -- ca_metallib=/redwood/share/ca-share/QuartzCore-default.metallib display_hz=120
 fbwidth=1080 fbheight=2340 fbscale=3 fbsubtype=2340 fb_zc=1 anim_max=1 (metal=1 metal_all=1 the defaults).
+**Run 21: swiping much smoother** (the tester), the display 1080 x 2340 centred on the panel's 1080 x 2400, not scaled
+-- the iPhone 13 mini's own, for zero copy (fb_zc=1 wants the panel's width, letterboxed). Before: 1125 x 2436 scaled
+to the panel. Built beside it, hakios-shiba-flash-full.img: the GPU arguments without fbwidth/fbheight/fbscale/
+fbsubtype/fb_zc -- full screen, scaled, a copy a frame.
 
 1. `darwin-write.py`: the root volume and the cryptexes into `darwin`, read back and compared; the data volume made.
 2. Boot as now, `fastboot boot`, with `root_apfs=ufs_darwin var_hfs=ufs_darwin_data ufs=2` (the shiba configuration's
