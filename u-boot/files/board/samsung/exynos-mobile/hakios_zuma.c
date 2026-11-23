@@ -556,6 +556,29 @@ static int do_zuma_ufs(struct cmd_tbl *cmdtp, int flag, int argc, char *const ar
 	       readl(UFS_VS + 12));
 	printf("[oosexgang] ufs: PMU PHY control %#x (bit 0, 1 = isolation off); vcc pin gpp0 CON %#x DAT %#x; gph5 CON %#x DAT %#x\n",
 	       readl(UFS_PMU_PHY), readl(UFS_VCC_BANK), readl(UFS_VCC_BANK + 4), readl(UFS_PIN_BANK), readl(UFS_PIN_BANK + 4));
+	/*
+	 * The PHY's PMA, as gs201's CAL addresses it (the common block at the PHY's base, lane N's TRSV at +0x800 N; zuma's
+	 * own CAL is not public): the registers its post_h8_enter writes (COMN 0x00 0x86, 0x04 0x08, 0x20 0x60; TRSV 0x888
+	 * 0x08, 0x918 0x01, 0x988 0x08, 0x994 0x0A) and pre_h8_exit undoes (0xC6, 0x0C, 0xE0; 0x18, 0x03, 0x00, 0x00). Read
+	 * with the M-PHY's APB clock let run, as the CAL reads them (CLKSTOP_CTRL bit 3 cleared around it, then put back).
+	 */
+	{
+		const ulong pma = 0x13204000UL, clkstop = UFSHCI + 0x11b0;
+		static const u16 comn[] = { 0x00, 0x04, 0x20 }, trsv[] = { 0x888, 0x918, 0x988, 0x994, 0xce4 };
+		u32 cs = readl(clkstop);
+
+		writel(cs & ~BIT(3), clkstop);
+		printf("[oosexgang] ufs: PHY COMN:");
+		for (int i = 0; i < ARRAY_SIZE(comn); i++)
+			printf(" %#x=%#x", comn[i], readl(pma + comn[i]));
+		for (int lane = 0; lane < 2; lane++) {
+			printf("\n[oosexgang] ufs: PHY TRSV lane %d:", lane);
+			for (int i = 0; i < ARRAY_SIZE(trsv); i++)
+				printf(" %#x=%#x", trsv[i], readl(pma + trsv[i] + 0x800 * lane));
+		}
+		writel(cs, clkstop);
+		printf("\n[oosexgang] ufs: (CLKSTOP_CTRL %#x)\n", cs);
+	}
 	if ((hce & 1) && (hcs & 0xf) == 0xf)
 		printf("[oosexgang] ufs: LEFT UP: the controller enabled, the device present, the lists and UIC ready\n");
 	else
