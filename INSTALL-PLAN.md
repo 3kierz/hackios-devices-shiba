@@ -424,6 +424,9 @@ hakios-metal), make -C hakios-metal ios-mali ARCH=arm64e; the user space with BI
 HakiosMetal 11.6 MB with the Mali back end. metal=2 shows it to every process but backboardd: applications draw on
 the GPU; iOS's own compositing (backboardd) does not -- that is METAL_PLUGIN=ca, which also needs a CoreAnimation
 default.metallib this 16.6.1 image lacks (tools/ca-metallib.py).
+**Run 11 (metal=2): stuck at the Apple logo** -- SpringBoard and mediaserverd aborted over and over (432 and 434
+times), each just after the Mali made a context for it. Back to metal=1, with userland/build.sh's new METAL_CLIENTS
+(HakiosMetal.clients beside the bundle): the device shown to MetalTest and metal_test only.
 
 1. `darwin-write.py`: the root volume and the cryptexes into `darwin`, read back and compared; the data volume made.
 2. Boot as now, `fastboot boot`, with `root_apfs=ufs_darwin var_hfs=ufs_darwin_data ufs=2` (the shiba configuration's
