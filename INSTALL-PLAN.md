@@ -351,6 +351,11 @@ steps are the 8a's BCM4383's (refused on the 4398 without wifi_4398=1). The firs
 interconnect type 6 (NCI), whose enumeration ROM the AXI scan cannot read. Step 1 now shows that ROM raw (reads only,
 256 words at most) and stops; the next boot has wifi=1 wifi_4398=1. The phone's own firmware is in fw-wifi/ (b0, c0,
 d0; out of git).
+**Wi-Fi 1:** the 4398's EROM read raw (0x330 bytes at 0x18007118). Its format from Google's 4398 driver
+(nciutils.c, read for the facts): interfaces of two words (node, flags with the header's offset) and a slave's address
+words; the core headers in the OOBR (0x18006000) and EROM part 1 (0x18007000). Step 1 now walks it (nci_scan) and lists
+the cores, ids from their headers; reads only, then stops. usbmux-log.py now reconnects by itself (the phone leaves
+the bus at the Apple logo) and only appends.
 
 1. `darwin-write.py`: the root volume and the cryptexes into `darwin`, read back and compared; the data volume made.
 2. Boot as now, `fastboot boot`, with `root_apfs=ufs_darwin var_hfs=ufs_darwin_data ufs=2` (the shiba configuration's

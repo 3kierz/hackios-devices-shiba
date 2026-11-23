@@ -475,6 +475,87 @@ erom_scan(void)
 	return core_count > 0;
 }
 
+/*
+ * The cores of a chip on Broadcom's NCI interconnect (interconnect type 6 in chipcommon's id: the Pixel 8's BCM4398,
+ * 2026-11-23). The facts from Google's driver for the 4398 (google-modules/wlan/bcmdhd/bcm4398, nciutils.c; GPL, read
+ * for the facts, none of it here): chipcommon's EROM pointer is "EROM part 2", a list of interfaces, two words each:
+ *   A  the interface's network node (bits 31:3; the wrapper of a core is the node of its first interface) and type
+ *   B  bits 31:28 non-zero while more follow, 27 the core's header in EROM part 1 (the pointer's 4 KB page) rather than
+ *      the OOBR (its 8 KB page), 26 a master, 25:24 address words less one (a slave's), 23:20 the backplane, 12:0 the
+ *      header's offset; a slave's address words follow: base in 31:8, bit 6 a bound word after it, bit 5 three more
+ *      words (64-bit), else bits 4:0 the size (1 << (n + 8) bytes)
+ * A core's header: its info word (id 11:0, revision 19:12, maker 23:20) and its interface count (15:12 of the next).
+ * Reads only. The cores found go into cores[] as erom_scan's do: id (0x800 added below 0x100, as Broadcom's ids are
+ * numbered), revision, the first slave address, the first node.
+ */
+static void
+nci_scan(void)
+{
+	uint32_t at = bp_rd(CC_BASE + CC_EROMPTR), start = at, oobr = at & ~0x1fffu, erom1 = at & ~0xfffu, b = 1u << 28;
+
+	printf("wifi: 1: NCI: interfaces at 0x%08x, the OOBR at 0x%08x, EROM part 1 at 0x%08x\n", at, oobr, erom1);
+	core_count = 0;
+	while (at - start < 0x400 && (b >> 28) != 0) {
+		uint32_t a = bp_rd(at), hdr, info, ifcfg, base = 0, wrap = 0;
+		unsigned n;
+
+		if (a == 0xffffffffu) {
+			break;
+		}
+		b = bp_rd(at + 4);
+		hdr = ((b & (1u << 27)) ? erom1 : oobr) + (b & 0x1fffu);
+		info = bp_rd(hdr);
+		ifcfg = bp_rd(hdr + 4);
+		n = (ifcfg >> 12) & 0xf;
+		uint16_t id = info & 0xfff;
+
+		if (id < 0x100) {
+			id |= 0x800;
+		}
+		printf("wifi: 1: core 0x%03x %-10s rev %3u (info 0x%08x, header 0x%08x, %u interfaces)\n", id, core_name(id),
+		    (info >> 12) & 0xff, info, hdr, n);
+		for (unsigned i = 0; i < n && at - start < 0x400; i++) {
+			a = bp_rd(at);
+			b = bp_rd(at + 4);
+			at += 8;
+			if (wrap == 0 && (a & ~7u) != 0) {
+				wrap = a & ~7u;
+			}
+			if (b & (1u << 26)) {
+				printf("wifi: 1:   master, node 0x%08x type %u, backplane %u\n", a & ~7u, a & 7, (b >> 20) & 0xf);
+				continue;
+			}
+			unsigned naddr = ((b >> 24) & 3) + 1;
+
+			for (unsigned k = 0; k < naddr; k++) {
+				uint32_t ad = bp_rd(at), lo = ad & ~0xffu, hi;
+
+				at += 4;
+				if (ad & 0x20) {
+					hi = bp_rd(at);
+					at += 12;
+					printf("wifi: 1:   slave, node 0x%08x: 64-bit 0x%08x%08x\n", a & ~7u, hi, lo);
+					continue;
+				}
+				if (ad & 0x40) {
+					hi = bp_rd(at);
+					at += 4;
+				} else {
+					hi = lo + ((1u << ((ad & 0x1f) + 8)) - 1);
+				}
+				if (base == 0) {
+					base = lo;
+				}
+				printf("wifi: 1:   slave, node 0x%08x, backplane %u: 0x%08x-0x%08x\n", a & ~7u, (b >> 20) & 0xf, lo, hi);
+			}
+		}
+		if (core_count < CORES_MOST) {
+			cores[core_count++] = (struct core){ .id = id, .rev = (uint8_t)((info >> 12) & 0xff), .base = base, .wrap = wrap };
+		}
+	}
+	printf("wifi: 1: NCI: %u cores\n", core_count);
+}
+
 /* (aiutils' _ai_core_reset: Google's driver resets the ARM this way) */
 static void
 core_reset(const struct core *c, uint32_t bits, uint32_t resetbits)
@@ -3842,26 +3923,10 @@ bcm_steps(void)
 	}
 	printf("wifi: 1: chipcommon id 0x%08x; PCIe core: power control 0x%08x, completion timeout 0x%08x\n",
 	    bp_rd(CC_BASE + CC_CHIPID), pcie_rd(PCIE_POWER_CONTROL), pcie_rd(PCIE_CPL_TO_CTRL));
-	/*
-	 * The Pixel 8's BCM4398 (2026-11-23): its chip id word says interconnect type 6, Broadcom's NCI, not the AXI (1)
-	 * whose enumeration ROM erom_scan reads. Until its format is known here, the ROM is shown as it is -- reads only,
-	 * 256 words at most, stopping after 16 zero words -- and nothing further is done.
-	 */
+	/* the Pixel 8's BCM4398: interconnect type 6 (NCI), its cores listed by nci_scan; nothing further yet */
 	if (((bp_rd(CC_BASE + CC_CHIPID) >> 28) & 0xf) == 6) {
-		uint32_t at = bp_rd(CC_BASE + CC_EROMPTR), zeros = 0;
-
-		printf("wifi: 1: interconnect type 6 (NCI): the enumeration ROM at 0x%08x, as read:\n", at);
-		for (unsigned i = 0; i < 256 && zeros < 16; i += 8) {
-			uint32_t w[8];
-
-			for (unsigned j = 0; j < 8; j++) {
-				w[j] = bp_rd(at + 4 * (i + j));
-				zeros = w[j] == 0 ? zeros + 1 : 0;
-			}
-			printf("wifi: 1: +%03x: %08x %08x %08x %08x %08x %08x %08x %08x\n", 4 * i, w[0], w[1], w[2], w[3], w[4],
-			    w[5], w[6], w[7]);
-		}
-		printf("wifi: 1: the NCI enumeration is not read yet: stopped (nothing written)\n");
+		nci_scan();
+		printf("wifi: 1: the 4398's steps after the cores are not written yet: stopped (nothing written)\n");
 		return false;
 	}
 	if (!erom_scan()) {

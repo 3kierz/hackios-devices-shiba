@@ -9,7 +9,8 @@ usage: usbmux-log.py [-k] [OUTPUT]      (stdout, or OUTPUT as well; needs usbmux
 usbmuxd: Linux's socket /var/run/usbmuxd, or else Windows' Apple Mobile Device Service (iTunes, Apple Devices) at
 127.0.0.1:27015 -- from WSL, run this with Windows' Python, which reaches it and the USB port with no usbipd:
   python.exe "$(wslpath -w devices/shiba/tools/usbmux-log.py)" run.txt
-It waits for the phone (started before HakiOS is, it has the log from the first line the kernel still keeps).
+It waits for the phone (started before HakiOS is, it has the log from the first line the kernel still keeps), and
+waits for it again when it goes away, until Ctrl+C. OUTPUT is appended to.
 """
 import os
 import plistlib
@@ -73,13 +74,30 @@ args = sys.argv[1:]
 port = 5 if args[:1] == ['-k'] else 1
 args = args[1:] if port == 5 else args
 out = open(args[0], 'ab') if args else None
-s = mux_connect(port)
+
+
+def emit(data):
+    sys.stdout.buffer.write(data)
+    sys.stdout.buffer.flush()
+    if out:
+        out.write(data)
+        out.flush()
+
+
+# The phone leaves the bus and comes back while iOS starts (its own USB side taking over at the Apple logo): the
+# connection is made again by itself, a marked line between the two. The file is appended to, never overwritten; the
+# phone sends its log from the start again on each connection.
 try:
-    while data := s.recv(65536):
-        sys.stdout.buffer.write(data)
-        sys.stdout.buffer.flush()
-        if out:
-            out.write(data)
-            out.flush()
+    while True:
+        s = mux_connect(port)
+        try:
+            while data := s.recv(65536):
+                emit(data)
+        except OSError:
+            pass
+        s.close()
+        emit(('\n--- usbmux-log: the phone went away at %s; waiting for it again ---\n' %
+              time.strftime('%H:%M:%S')).encode())
+        time.sleep(1)
 except KeyboardInterrupt:
     pass
