@@ -22,7 +22,7 @@ index e049ed21..fe54fb83 100644
  # Copyright (C) 2025 Kaustabh Chakraborty <kauschluss@disroot.org>
  
  obj-y := exynos-mobile.o
-+obj-$(CONFIG_HAKIOS_ZUMA) += hakios_zuma.o hakios_zuma_ufs.o
++obj-$(CONFIG_HAKIOS_ZUMA) += hakios_zuma.o hakios_zuma_ufs.o hakios_zuma_cal.o
 diff --git a/board/samsung/exynos-mobile/exynos-mobile.c b/board/samsung/exynos-mobile/exynos-mobile.c
 index 6b2b1523..ec6ca19e 100644
 --- a/board/samsung/exynos-mobile/exynos-mobile.c

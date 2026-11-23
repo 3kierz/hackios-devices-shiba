@@ -75,6 +75,13 @@ The work that has to come first, and is safe: a U-Boot driver that gives the loa
    and reset, Samsung's link set-up (CAL init_cfg and the HS gear 4 calibration, all in the same Android module), the
    UniPro link start-up, the device's initialisation (NOP, fDeviceInit), the switch to HS gear 4 -- as Google's
    ufs-exynos.c and Linux's ufshcd do at boot. Larger work, still read only towards the storage's contents.
+   **Written 2026-11-23, not yet run:** `hakios_zuma_ufs.c` now brings it up from cold -- the PHY's isolation checked and
+   the IO coherency set, the device's supply (gpp0-1) on and its pins (gph5-0/1) back on function 2, Samsung's software
+   reset and host set-up, the device's reset pulse, zuma's CAL `pre_link`/`post_link` (Samsung's own code and tables from
+   `google-modules/soc/gs` `drivers/ufs/zuma`, unchanged, in `zuma-cal/`), DME_LINKSTARTUP, NOP OUT, fDeviceInit -- in
+   PWM-G1; `zuma ufs hs` then asks for HS-G4 rate B (the CAL's `pre_pmc`/`post_pmc` around the power mode change). The
+   only request that writes anything to the device is SET FLAG fDeviceInit (its own initialisation, which every host
+   does at every boot); SCSI stays on the read-only list.
 2. U-Boot's SCSI/block layer on top, so `part list` shows the GPT, and the loader sees the disks through EFI.
 3. Read only, checked against Android: the same blocks read in U-Boot and in Android (`dd`), hashes compared.
 

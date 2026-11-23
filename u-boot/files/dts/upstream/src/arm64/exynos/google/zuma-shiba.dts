@@ -72,8 +72,10 @@
 
 	/*
 	 * The storage: the UFS host controller (Android's tree: ufs@13200000), its standard UFSHCI registers. Google's
-	 * bootloader leaves it up (zuma ufs, 2026-11-23: enabled, the device present, both lists running); U-Boot adopts it as
-	 * it is and only reads (board/samsung/exynos-mobile/hakios_zuma_ufs.c). Not here yet: USB (the DWC3 at 0x11210000).
+	 * bootloader leaves the controller enabled but the UFS device powered off (zuma ufs and five runs, 2026-11-23), so
+	 * U-Boot brings both up from cold and only reads (board/samsung/exynos-mobile/hakios_zuma_ufs.c, with Samsung's zuma
+	 * CAL in zuma-cal/; the vendor, UniPro and PHY registers at the addresses of Android's tree). Not here yet: USB (the
+	 * DWC3 at 0x11210000).
 	 */
 	ufs@13200000 {
 		compatible = "hakios,zuma-ufs";

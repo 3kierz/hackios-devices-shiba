@@ -538,8 +538,13 @@ static int do_zuma_panel(struct cmd_tbl *cmdtp, int flag, int argc, char *const 
 #define UFS_VCC_BANK		0x10840000UL	/* gpp0: CON +0, DAT +4 */
 #define UFS_PIN_BANK		0x13060000UL
 
+int hk_zuma_ufs_hs(void);	/* hakios_zuma_ufs.c */
+
 static int do_zuma_ufs(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
 {
+	if (argc > 1 && !strcmp(argv[1], "hs"))		/* zuma ufs hs: the link brought up by scsi scan to HS-G4 */
+		return hk_zuma_ufs_hs() ? CMD_RET_FAILURE : CMD_RET_SUCCESS;
+
 	u32 cap = readl(UFSHCI + 0x00), ver = readl(UFSHCI + 0x08), hcs = readl(UFSHCI + 0x30);
 	u32 hce = readl(UFSHCI + 0x34), is = readl(UFSHCI + 0x20), ie = readl(UFSHCI + 0x24);
 
@@ -653,7 +658,7 @@ static struct cmd_tbl cmd_zuma_sub[] = {
 	U_BOOT_CMD_MKENT(pmic, 6, 0, do_zuma_pmic, "", ""),
 	U_BOOT_CMD_MKENT(touch, 1, 0, do_zuma_touch, "", ""),
 	U_BOOT_CMD_MKENT(panel, 1, 0, do_zuma_panel, "", ""),
-	U_BOOT_CMD_MKENT(ufs, 1, 0, do_zuma_ufs, "", ""),
+	U_BOOT_CMD_MKENT(ufs, 2, 0, do_zuma_ufs, "", ""),
 	U_BOOT_CMD_MKENT(wdt, 1, 0, do_zuma_wdt, "", ""),
 	U_BOOT_CMD_MKENT(pstore, 1, 0, do_zuma_pstore, "", ""),
 };
@@ -677,6 +682,7 @@ U_BOOT_CMD(zuma, 7, 0, do_zuma,
 	"zuma pmic read|write BUS TYPE REG [VALUE] - a PMIC register through ACPM (S2MPG14: bus 0, regulators type 1)\n"
 	"zuma touch - the touch screen powered and out of reset, for the kernel's driver\n"
 	"zuma panel - which panel the bootloader found ($hakios_panel)\n"
-	"zuma ufs - the UFS host controller as the bootloader left it (read only)\n"
+	"zuma ufs - the UFS host controller's registers (read only)\n"
+	"zuma ufs hs - the storage's link, brought up by scsi scan in PWM-G1, to HS-G4 rate B\n"
 	"zuma bldrlog [addr size] - a look at the bootloader's log buffer (default bldr_log_reserved@fd800000)"
 );
