@@ -449,6 +449,9 @@ The 8a's repositories, 2026-11-23: Martinvlba/hakios-xnu-kernel's akita-port has
 Martinvlba/hakios-devices-akita's drivers match shiba's but for that rename and shiba's own changes, its one new piece
 a USB CDC-ACM serial console beside usbmux (hakios.akita_serial.c). Neither carries the CoreAnimation library: the
 8a's bootrun.sh still takes it from ~/ca-share, the iPhone 11's.
+**Wi-Fi, the stall after a join:** en0 is 1500 bytes of MTU, no offloads (hakios.net.c), so the PHYTX errors' frames
+of 1900-2200 bytes are the firmware's own aggregates, and its dump was the aggregation queue manager's (AQM). Next boot:
+boot-arg wifi_noagg=1 ("amsdu" 0, "ampdu" 0 before WLC_UP), and en0's sends counted by ethertype with the longest.
 
 1. `darwin-write.py`: the root volume and the cryptexes into `darwin`, read back and compared; the data volume made.
 2. Boot as now, `fastboot boot`, with `root_apfs=ufs_darwin var_hfs=ufs_darwin_data ufs=2` (the shiba configuration's

@@ -2596,6 +2596,18 @@ scan_all(void)
 			    iovar_int("arp_ol", 0), iovar_int("ndoe", 0));
 		}
 	}
+	{
+		/*
+		 * Boot-arg wifi_noagg=1 (the 4398, 2026-11-23, a test): the firmware's aggregation off before the radio comes up
+		 * -- its halt after a join was a PSM watchdog in its aggregation queue manager (AQM), PHYTX errors on frames of
+		 * 1900-2200 bytes, which only A-MSDU or A-MPDU make of en0's 1514 at most
+		 */
+		uint32_t noagg = 0;
+
+		if (PE_parse_boot_argn("wifi_noagg", &noagg, sizeof(noagg)) && noagg != 0) {
+			printf("wifi: 7: wifi_noagg: \"amsdu\" 0: %d; \"ampdu\" 0: %d\n", iovar_int("amsdu", 0), iovar_int("ampdu", 0));
+		}
+	}
 	printf("wifi: 7: \"mpc\" 0: %d; infrastructure: %d; up: %d\n", iovar_int("mpc", 0), cmd_int(20, 1), cmd_int(2, 1));
 	{
 		/* (11-11, a test of TODO 35f) wifi_roamoff=1: the firmware's own roaming off -- after a failed handshake it may
@@ -2847,6 +2859,9 @@ flow_create(const uint8_t *da)
 	    tx.ring_pa);
 }
 
+static uint32_t tx_len_max, tx_type_count[8];
+static uint16_t tx_types[8];
+
 static bool
 en0_transmit(mbuf_t packet, size_t length)
 {
@@ -2889,6 +2904,21 @@ en0_transmit(mbuf_t packet, size_t length)
 	__asm__ volatile ("dsb sy" ::: "memory");
 	pcie_wr(PCIE_H2D_MAILBOX_0, 1);
 	tx.sent++;
+	{
+		/* (the 4398, 2026-11-23: 1003 frames in the 5 s between a join and the firmware's halt -- what they were) */
+		uint16_t et = (uint16_t)(head[12] << 8 | head[13]);
+		unsigned k;
+
+		if (length > tx_len_max) {
+			tx_len_max = (uint32_t)length;
+		}
+		for (k = 0; k < 8 && tx_type_count[k] != 0 && tx_types[k] != et; k++) {
+		}
+		if (k < 8) {
+			tx_types[k] = et;
+			tx_type_count[k]++;
+		}
+	}
 	tx.outstanding++;
 	ok = true;
 out:
@@ -3343,6 +3373,9 @@ en0_poll(void)
 		if (msi_word != NULL) {
 			printf("wifi: en0: %u MSIs so far\n", msi_seen);
 		}
+		printf("wifi: en0: sent: the longest %u bytes; by ethertype: %04x %u, %04x %u, %04x %u, %04x %u, %04x %u, %04x %u\n",
+		    tx_len_max, tx_types[0], tx_type_count[0], tx_types[1], tx_type_count[1], tx_types[2], tx_type_count[2],
+		    tx_types[3], tx_type_count[3], tx_types[4], tx_type_count[4], tx_types[5], tx_type_count[5]);
 		edl_histogram_say();
 		if (!fw_halted && mb.tcm_d2h_w != 0) {
 			/*
