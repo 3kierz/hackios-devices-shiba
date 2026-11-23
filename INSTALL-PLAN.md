@@ -59,6 +59,13 @@ The work that has to come first, and is safe: a U-Boot driver that gives the loa
      as it is and resets nothing");
    - **it is powered down:** U-Boot brings it up itself (the device's supply and pins, Samsung's PHY calibration, the
      link to HS gear 4), which is much more work and is what the 8a's environment describes (`ufs-exynos-gs.c`).
+   **Found 2026-11-23, in four runs** (`hakios_zuma_ufs.c`): the list adopted (below 4 GB), Samsung's nexus bit set, but
+   no request completes, because the link sleeps (Hibern8, the bootloader's last UIC command 0x17) and the standard
+   DME_HIBERNATE_EXIT fails without the PHY's own wake-up writes (HCS power-mode status 5, PWR_FATAL_ERROR). Google's
+   driver runs Samsung's CAL `pre_h8_exit` before the exit; **zuma's CAL is not public** (only gs101's and gs201's are),
+   and zuma's PHY does not hold gs201's values (read: COMN 0x00/0x04/0x20 = 0x11/0/0, not 0x86/0x08/0x60), so gs201's
+   are not written. **Next: zuma's own writes, traced on the phone's Android** (`events/rwmmio`: Android puts the link
+   into Hibern8 and out of it many times a second), or the 8a author's U-Boot.
 2. U-Boot's SCSI/block layer on top, so `part list` shows the GPT, and the loader sees the disks through EFI.
 3. Read only, checked against Android: the same blocks read in U-Boot and in Android (`dd`), hashes compared.
 
