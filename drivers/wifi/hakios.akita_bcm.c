@@ -3842,6 +3842,28 @@ bcm_steps(void)
 	}
 	printf("wifi: 1: chipcommon id 0x%08x; PCIe core: power control 0x%08x, completion timeout 0x%08x\n",
 	    bp_rd(CC_BASE + CC_CHIPID), pcie_rd(PCIE_POWER_CONTROL), pcie_rd(PCIE_CPL_TO_CTRL));
+	/*
+	 * The Pixel 8's BCM4398 (2026-11-23): its chip id word says interconnect type 6, Broadcom's NCI, not the AXI (1)
+	 * whose enumeration ROM erom_scan reads. Until its format is known here, the ROM is shown as it is -- reads only,
+	 * 256 words at most, stopping after 16 zero words -- and nothing further is done.
+	 */
+	if (((bp_rd(CC_BASE + CC_CHIPID) >> 28) & 0xf) == 6) {
+		uint32_t at = bp_rd(CC_BASE + CC_EROMPTR), zeros = 0;
+
+		printf("wifi: 1: interconnect type 6 (NCI): the enumeration ROM at 0x%08x, as read:\n", at);
+		for (unsigned i = 0; i < 256 && zeros < 16; i += 8) {
+			uint32_t w[8];
+
+			for (unsigned j = 0; j < 8; j++) {
+				w[j] = bp_rd(at + 4 * (i + j));
+				zeros = w[j] == 0 ? zeros + 1 : 0;
+			}
+			printf("wifi: 1: +%03x: %08x %08x %08x %08x %08x %08x %08x %08x\n", 4 * i, w[0], w[1], w[2], w[3], w[4],
+			    w[5], w[6], w[7]);
+		}
+		printf("wifi: 1: the NCI enumeration is not read yet: stopped (nothing written)\n");
+		return false;
+	}
 	if (!erom_scan()) {
 		printf("wifi: 1: no cores: stopped\n");
 		return false;

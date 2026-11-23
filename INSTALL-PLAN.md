@@ -346,6 +346,11 @@ mediaserverd) now leaves a nil function out and says who described it (image:sym
 been 15 in 3 minutes). It never said "left out": with the method replaced no nil reached it, so who described the
 pipeline is still not known.
 Sound works (your test, from the phone's speaker).
+**Wi-Fi, the 4398's port begun:** the image ran pcie=5 without wifi=, so the chip was never started; the driver's
+steps are the 8a's BCM4383's (refused on the 4398 without wifi_4398=1). The first difference: the 4398's chip id says
+interconnect type 6 (NCI), whose enumeration ROM the AXI scan cannot read. Step 1 now shows that ROM raw (reads only,
+256 words at most) and stops; the next boot has wifi=1 wifi_4398=1. The phone's own firmware is in fw-wifi/ (b0, c0,
+d0; out of git).
 
 1. `darwin-write.py`: the root volume and the cryptexes into `darwin`, read back and compared; the data volume made.
 2. Boot as now, `fastboot boot`, with `root_apfs=ufs_darwin var_hfs=ufs_darwin_data ufs=2` (the shiba configuration's
