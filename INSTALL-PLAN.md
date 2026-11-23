@@ -185,6 +185,11 @@ read back from Android's root shell and compared with the image's SHA-256.
 **Written, 2026-11-23 (your go-ahead):** fastboot (bootloader, max-download-size 0xf900000): 35 sparse pieces,
 `fastboot flash darwin` each, all OKAY. Back in Android, as root: darwin's first 2,208,768 blocks hash
 3b6721d5... -- the image's. `protected_blocks` set to 2208768 in darwin.json: darwin-write.py never writes them again.
+**First boot from darwin, 2026-11-23:** U-Boot, the loader (darwin listed, the 64-entry table's CRCs right) and the
+kernel (9 cores, the boot volume mounted as md0) ran; then `/sbin/launchd` (HakiOS's stage0) refused, errno 86 EBADARCH:
+our static raw-syscall programs (init, child, stage0, var_store) were built arm64e with ptrauth ABI version 0, which the
+kernel refuses as process 1 (as hello was). A local `STATIC_ARCH=arm64` in the kernel tree's userland/build.sh builds
+those four plain arm64; Apple's programs stay arm64e. Rebuilt with it.
 
 1. `darwin-write.py`: the root volume and the cryptexes into `darwin`, read back and compared; the data volume made.
 2. Boot as now, `fastboot boot`, with `root_apfs=ufs_darwin var_hfs=ufs_darwin_data ufs=2` (the shiba configuration's
