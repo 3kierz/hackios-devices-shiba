@@ -20,7 +20,7 @@
  *      ufshcd_verify_dev_init and ufshcd_complete_dev_init), and each logical unit's power-on UNIT ATTENTION collected.
  *
  * The link is then in PWM-G1 (slow: a few MB/s, enough for the tables and checks); one block is read as a test, and
- * "zuma ufs hs" (hk_zuma_ufs_hs; in the probe when $hakios_ufs_hs is 1, or the PWM-G1 read failed) asks for HS-G4 rate B
+ * "zuma ufs hs" (hk_zuma_ufs_hs; in the probe unless $hakios_ufs_hs is 0) asks for HS-G4 rate B
  * on every connected lane, with the CAL's pre_pmc and post_pmc around the power mode change.
  *
  * Run 6 (2026-11-23): the link up on both lanes, NOP IN at once, fDeviceInit done, bRefClkFreq 38.4 MHz; TEST UNIT READY,
@@ -833,8 +833,8 @@ static int zuma_ufs_probe(struct udevice *dev)
 	unit_attentions(dev);
 
 	/*
-	 * One block read before the SCSI scan, to see the data path on its own: in PWM-G1, and in HS-G4 when $hakios_ufs_hs
-	 * is 1 or PWM-G1 failed (the controller and the device brought up again first, as after any failed request).
+	 * One block read before the SCSI scan, to see the data path on its own: in PWM-G1, and in HS-G4 unless $hakios_ufs_hs
+	 * is 0 (and whenever PWM-G1 failed) (the controller and the device brought up again first, as after any failed request).
 	 */
 	pwm_ok = !test_read(dev, "PWM-G1");
 	if (!pwm_ok) {
@@ -848,7 +848,7 @@ static int zuma_ufs_probe(struct udevice *dev)
 		u->up = true;
 		unit_attentions(dev);
 	}
-	if (!pwm_ok || env_get_yesno("hakios_ufs_hs") == 1) {
+	if (!pwm_ok || env_get_yesno("hakios_ufs_hs") != 0) {
 		if (!hk_zuma_ufs_hs())
 			test_read(dev, "HS-G4");
 	}
