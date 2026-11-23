@@ -220,6 +220,10 @@ on) and stops in its second, `preboot`: "failed to lookup preboot: 25" -- `fsctl
 260 bytes: version 2, the role at bytes 2-3, 0x10 Preboot; the device node back from byte 4), which the kernel's APFS
 answered ENOTTY like every fsctl. A local kernel change answers that one request for role 0x10 with the device mounted on
 /private/preboot (this port's boot volume, which init moves there).
+**Eighth boot:** the role lookup answered ("preboot device: root_device", the boot volume's name as the first root);
+then "failed to get preboot mount point: 2": libignition reads the sysctl `vfs.generic.apfs.edt_fstab` (the APFS kext's
+volumes by role, 236-byte entries, the mount point at +32 and the role at +232). The kernel now has it, with one entry
+(role 0x10 on /private/preboot), there only after the root switch.
 
 1. `darwin-write.py`: the root volume and the cryptexes into `darwin`, read back and compared; the data volume made.
 2. Boot as now, `fastboot boot`, with `root_apfs=ufs_darwin var_hfs=ufs_darwin_data ufs=2` (the shiba configuration's
