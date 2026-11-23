@@ -526,6 +526,44 @@ static int do_zuma_panel(struct cmd_tbl *cmdtp, int flag, int argc, char *const 
 }
 
 /*
+ * zuma ufs: the phone's UFS host controller as Google's bootloader leaves it, READ ONLY (INSTALL-PLAN.md, phase 1): which
+ * U-Boot driver this phone needs -- one that adopts a controller left up, or one that brings it up itself. Nothing is
+ * written: register reads only. Addresses from the phone's tree (ufs@13200000: the standard UFSHCI at +0, the vendor
+ * registers at +0x1100) and the 8a's notes (the PHY's isolation in the PMU at +0x3ec0, bit 0; the device's supply on
+ * gpp0-1 of pinctrl@10840000; its pins gph5 at 0x13060000).
+ */
+#define UFSHCI			0x13200000UL
+#define UFS_VS			0x13201100UL
+#define UFS_PMU_PHY		0x15463ec0UL
+#define UFS_VCC_BANK		0x10840000UL	/* gpp0: CON +0, DAT +4 */
+#define UFS_PIN_BANK		0x13060000UL
+
+static int do_zuma_ufs(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
+{
+	u32 cap = readl(UFSHCI + 0x00), ver = readl(UFSHCI + 0x08), hcs = readl(UFSHCI + 0x30);
+	u32 hce = readl(UFSHCI + 0x34), is = readl(UFSHCI + 0x20), ie = readl(UFSHCI + 0x24);
+
+	printf("[oosexgang] ufs: UFSHCI at %#lx: CAP %#x (slots %u, task slots %u) VER %#x (%u.%u)\n", UFSHCI, cap,
+	       (cap & 0x1f) + 1, ((cap >> 16) & 0x7) + 1, ver, (ver >> 8) & 0xf, (ver >> 4) & 0xf);
+	printf("[oosexgang] ufs: HCE %#x (enabled %u)  HCS %#x (device present %u, UTRL ready %u, UTMRL ready %u, UIC cmd ready %u, power-mode status %u)\n",
+	       hce, hce & 1, hcs, hcs & 1, (hcs >> 1) & 1, (hcs >> 2) & 1, (hcs >> 3) & 1, (hcs >> 8) & 7);
+	printf("[oosexgang] ufs: IS %#x IE %#x  UTRLBA %#x:%08x  UTRLDBR %#x  UTRLRSR %#x  UTMRLBA %#x:%08x  UTMRLRSR %#x\n",
+	       is, ie, readl(UFSHCI + 0x54), readl(UFSHCI + 0x50), readl(UFSHCI + 0x58), readl(UFSHCI + 0x60),
+	       readl(UFSHCI + 0x74), readl(UFSHCI + 0x70), readl(UFSHCI + 0x80));
+	printf("[oosexgang] ufs: UICCMD %#x  ARG1-3 %#x %#x %#x\n", readl(UFSHCI + 0x90), readl(UFSHCI + 0x94),
+	       readl(UFSHCI + 0x98), readl(UFSHCI + 0x9c));
+	printf("[oosexgang] ufs: vendor +0x1100..: %08x %08x %08x %08x\n", readl(UFS_VS), readl(UFS_VS + 4), readl(UFS_VS + 8),
+	       readl(UFS_VS + 12));
+	printf("[oosexgang] ufs: PMU PHY control %#x (bit 0, 1 = isolation off); vcc pin gpp0 CON %#x DAT %#x; gph5 CON %#x DAT %#x\n",
+	       readl(UFS_PMU_PHY), readl(UFS_VCC_BANK), readl(UFS_VCC_BANK + 4), readl(UFS_PIN_BANK), readl(UFS_PIN_BANK + 4));
+	if ((hce & 1) && (hcs & 0xf) == 0xf)
+		printf("[oosexgang] ufs: LEFT UP: the controller enabled, the device present, the lists and UIC ready\n");
+	else
+		printf("[oosexgang] ufs: NOT left up as a whole (see the bits above)\n");
+	return CMD_RET_SUCCESS;
+}
+
+/*
  * zuma bldrlog [ADDR SIZE]: a look at the bootloader's own log buffer (bldr_log_reserved@fd800000, 1 MiB), which survives a
  * restart and which Google's bootloader reports from at the next start: its first words (a header?), and where its last
  * "Starting Linux kernel" line is -- the end of what the bootloader wrote -- with every header word that could be that
@@ -592,6 +630,7 @@ static struct cmd_tbl cmd_zuma_sub[] = {
 	U_BOOT_CMD_MKENT(pmic, 6, 0, do_zuma_pmic, "", ""),
 	U_BOOT_CMD_MKENT(touch, 1, 0, do_zuma_touch, "", ""),
 	U_BOOT_CMD_MKENT(panel, 1, 0, do_zuma_panel, "", ""),
+	U_BOOT_CMD_MKENT(ufs, 1, 0, do_zuma_ufs, "", ""),
 	U_BOOT_CMD_MKENT(wdt, 1, 0, do_zuma_wdt, "", ""),
 	U_BOOT_CMD_MKENT(pstore, 1, 0, do_zuma_pstore, "", ""),
 };
@@ -615,5 +654,6 @@ U_BOOT_CMD(zuma, 7, 0, do_zuma,
 	"zuma pmic read|write BUS TYPE REG [VALUE] - a PMIC register through ACPM (S2MPG14: bus 0, regulators type 1)\n"
 	"zuma touch - the touch screen powered and out of reset, for the kernel's driver\n"
 	"zuma panel - which panel the bootloader found ($hakios_panel)\n"
+	"zuma ufs - the UFS host controller as the bootloader left it (read only)\n"
 	"zuma bldrlog [addr size] - a look at the bootloader's log buffer (default bldr_log_reserved@fd800000)"
 );
