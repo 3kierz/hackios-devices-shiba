@@ -259,6 +259,8 @@ directory: /private/preboot/Cryptexes/OS/System/Library/Caches/com.apple.dyld", 
 `com.apple.xpc.launchd ... hello`, "Darwin Bootstrapper Version 7.0.0", its boot-args. About a second later (launchd
 reading FeatureFlags plists) the kernel entered the debugger with no panic text in the returned log. A local kernel change
 writes the reason of every debugger entry (op, message, panic string, caller) into that log; the trace is off again.
+**Seventeenth boot:** "debugger entered: op 3, message panic, panic string `userspace panic: %s`" -- launchd itself asked
+for the panic (reboot with RB_PANIC|RB_QUICK and its own message). The kernel now writes that message into the log too.
 
 1. `darwin-write.py`: the root volume and the cryptexes into `darwin`, read back and compared; the data volume made.
 2. Boot as now, `fastboot boot`, with `root_apfs=ufs_darwin var_hfs=ufs_darwin_data ufs=2` (the shiba configuration's
