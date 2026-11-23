@@ -129,6 +129,13 @@ the primary; carve.py is to be run on the real one, which backup.py copies.)
 3. `darwin-write.py`: the Pixel 8's own constants (partition number 35, its exact LBAs from the table above) instead of
    the POCO's.
 
+**Phase 0.2 done, 2026-11-23:** `backup.py --with-bootchain --yes`: 56 partitions and the four LUNs' tables (8 copies),
+1019 MB, every one proven by its three hashes at the first try, all matching manifest.json again afterwards; kept in
+`devices/shiba/backups/20261123/` (ignored by git). `carve.py` on the real tables, 32 GiB: the table is the planned one;
+the new one (64 entries; userdata LBA 2449894..22807039, 77.66 GiB; darwin sda35 LBA 22807040..31196154, 32.00 GiB) checks
+out both ways, entries 34-35 the only ones changed; `carve/darwin.json` written. Nothing written to the phone.
+Still yours before phase 3: your own data (0.1), and a way back from fastboot alone checked (0.3).
+
 ## Phase 3: the partition (the one destructive step, your decision)
 
 1. **Size.** iOS needs about 5.6 GB (root volume) + 2.7 GB (cryptexes) + the data volume. The POCO used 20 GiB; the 8a
