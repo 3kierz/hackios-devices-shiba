@@ -335,6 +335,10 @@ subtype 2, no ptrauth-ABI bit), which the kernel grades 0 and does not exec (gra
 arm64, ran. userland/build.sh now marks them ptrauth ABI version 0 (PAC is off in this kernel: the ABIs are one
 here) and signs them again; build with LDID=~/theos/toolchain/linux/iphone/bin/ldid, or the programs that need
 entitlements (lsreg, locfeed, ...) are signed without them.
+**Thirty-third boot:** no "Missing executable": thermal_state, memsay, klogsave (the kernel's log into
+/private/var/mobile/Media/hakios-klog, in memory), ptp_responder, lsreg (MetalTest.app registered), locfeed and the
+wifi job all ran. USB came up as Code 10 in Windows at first; a replug (the driver's own re-init) fixed it.
+mediaserverd still restarts (the Metal assertion).
 
 1. `darwin-write.py`: the root volume and the cryptexes into `darwin`, read back and compared; the data volume made.
 2. Boot as now, `fastboot boot`, with `root_apfs=ufs_darwin var_hfs=ufs_darwin_data ufs=2` (the shiba configuration's
