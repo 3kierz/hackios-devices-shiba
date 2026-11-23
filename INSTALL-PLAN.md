@@ -408,6 +408,13 @@ heard: "event_msgs" -23 (unsupported: the 4398 has only "event_msgs_ext", eventm
 third 16-bit word -- read as one word it was 0x60001). Now: event_msgs_ext when event_msgs is refused; the scan
 parameters of the version the firmware gives (2/3: the v2 layout; 4: scan_type_ext after scan_type), for step 7's scan
 and the station's alike. The Metal build: Ubuntu's meson is 1.3.2, Mesa 26 wants 1.4 or later.
+**Run 9: Wi-Fi joins.** "event_msgs_ext" 0, scan parameters v3, the boot's scan: 14 access points in 4.5 s;
+Settings' scans answered; a WPA2-PSK network joined from Settings (link up, keys set by the firmware's supplicant,
+5500 MHz, -56 dBm). 5 s later the firmware halted: dozens of "PHYTX error" (TDC_Frmlen and Psdulen disagree),
+"TXE shared error", a PSM watchdog (the MAC's microcode), tx FIFO 7 flush timeouts, a trap -- once data was sent.
+The frames with odd ethertypes were flagged 0x2, BCMPCIE_PKT_FLAGS_FRAME_802_11: 802.11 management frames, now
+kept from en0. The next boot runs without Bluetooth (bt=0), to see whether the shared radio's other half is in the
+way of Wi-Fi's transmits.
 
 1. `darwin-write.py`: the root volume and the cryptexes into `darwin`, read back and compared; the data volume made.
 2. Boot as now, `fastboot boot`, with `root_apfs=ufs_darwin var_hfs=ufs_darwin_data ufs=2` (the shiba configuration's

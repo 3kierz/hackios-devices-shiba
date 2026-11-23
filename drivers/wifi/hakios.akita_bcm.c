@@ -1511,6 +1511,13 @@ rx_frame(const uint8_t *f, uint32_t len, uint16_t flags, uint8_t ifidx)
 		mb.rx_types[i] = type;
 		mb.rx_type_count[i]++;
 	}
+	/*
+	 * (the 4398, 2026-11-23: frames flagged 0x2, BCMPCIE_PKT_FLAGS_FRAME_802_11, are 802.11 frames -- management ones the
+	 * firmware hands up, not Ethernet: their "ethertypes" read 0xffff, 0x02cd, 0xae51. Not for en0.)
+	 */
+	if (flags & 0x2) {
+		return;
+	}
 	if (en0_attached && en0_live && ifidx == 0 && len >= 14 && len <= HAKIOS_NET_FRAME_MAX) {
 		hakios_net_input(f, len);
 	}
