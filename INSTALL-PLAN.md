@@ -356,6 +356,12 @@ d0; out of git).
 words; the core headers in the OOBR (0x18006000) and EROM part 1 (0x18007000). Step 1 now walks it (nci_scan) and lists
 the cores, ids from their headers; reads only, then stops. usbmux-log.py now reconnects by itself (the phone leaves
 the bus at the Apple logo) and only appends.
+**Wi-Fi 2:** the 4398's cores (37): ARM CA7 rev 13 (0x18080000, node 0x18504000), sysmem rev 14 (0x18088000; ROM
+0x0-0x29ffff, RAM from 0x2a0000), PCIe2 rev 130, three 802.11 rev 88, chipcommon 76, PMU 46, GCI 28. From Google's
+4398 driver (a local clone, read for the facts): no firmware signature in its build; firmware d0 for chip rev 3; the
+CA7 halted by reset with SICF_CPUHALT and let go by clearing that bit; the vars and random seed below the top of RAM;
+the reset vector at address 0. Step 2 now: completion timeout 0x8a061a80, the ARM's domain, the sysmem up and sized
+from its banks, the CA7 halted (NCI's way: DMP control at the OOBR header + 8, IDM reset at node + 0x140); then stops.
 
 1. `darwin-write.py`: the root volume and the cryptexes into `darwin`, read back and compared; the data volume made.
 2. Boot as now, `fastboot boot`, with `root_apfs=ufs_darwin var_hfs=ufs_darwin_data ufs=2` (the shiba configuration's

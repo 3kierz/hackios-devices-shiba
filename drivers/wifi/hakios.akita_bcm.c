@@ -195,6 +195,10 @@ static struct core {
 	uint16_t id;
 	uint8_t rev;
 	uint32_t base, wrap;
+	/* NCI (the BCM4398): the core's DMP control (its OOBR header + 8; 0: none), its interfaces' nodes, and its
+	 * slave addresses (the sysmem's second is its RAM) */
+	uint32_t dmp, node[6], addr[4];
+	uint8_t nodes, addrs;
 } cores[CORES_MOST];
 static unsigned core_count;
 static uint32_t ram_base, ram_size;
@@ -514,12 +518,16 @@ nci_scan(void)
 		}
 		printf("wifi: 1: core 0x%03x %-10s rev %3u (info 0x%08x, header 0x%08x, %u interfaces)\n", id, core_name(id),
 		    (info >> 12) & 0xff, info, hdr, n);
+		struct core nc = { 0 };
 		for (unsigned i = 0; i < n && at - start < 0x400; i++) {
 			a = bp_rd(at);
 			b = bp_rd(at + 4);
 			at += 8;
 			if (wrap == 0 && (a & ~7u) != 0) {
 				wrap = a & ~7u;
+			}
+			if ((a & ~7u) != 0 && nc.nodes < 6) {
+				nc.node[nc.nodes++] = a & ~7u;
 			}
 			if (b & (1u << 26)) {
 				printf("wifi: 1:   master, node 0x%08x type %u, backplane %u\n", a & ~7u, a & 7, (b >> 20) & 0xf);
@@ -546,14 +554,199 @@ nci_scan(void)
 				if (base == 0) {
 					base = lo;
 				}
+				if (nc.addrs < 4) {
+					nc.addr[nc.addrs++] = lo;
+				}
 				printf("wifi: 1:   slave, node 0x%08x, backplane %u: 0x%08x-0x%08x\n", a & ~7u, (b >> 20) & 0xf, lo, hi);
 			}
 		}
 		if (core_count < CORES_MOST) {
-			cores[core_count++] = (struct core){ .id = id, .rev = (uint8_t)((info >> 12) & 0xff), .base = base, .wrap = wrap };
+			cores[core_count] = nc;
+			cores[core_count].id = id;
+			cores[core_count].rev = (uint8_t)((info >> 12) & 0xff);
+			cores[core_count].base = base;
+			cores[core_count].wrap = wrap;
+			cores[core_count].dmp = (hdr & ~0x1fffu) == oobr && hdr < erom1 ? hdr + 8 : 0;
+			core_count++;
 		}
 	}
 	printf("wifi: 1: NCI: %u cores\n", core_count);
+}
+
+/*
+ * A core's reset and flags on NCI, as Google's driver for the 4398 does them (nciutils.c: nci_core_cflags,
+ * nci_core_reset_iface, nci_core_reset_enable, nci_iscoreup; hal_nci_cmn.h). The flags (SICF_*: clock enable, force
+ * gated clock, the CPU's halt in bit 5) are the DMP control word at the core's OOBR header + 8; the reset is bit 0 of
+ * each of its network nodes' IDM reset control (node + 0x140, its status at + 0x144). A node that more than one core
+ * has (a shared PMNI) is left alone. Each wait is 5 ms at most, as there.
+ */
+#define NI_IDM_RESET_CONTROL    0x140
+#define NI_IDM_RESET_STATUS     0x144
+#define NI_IDM_RESET_ENTRY      0x1u
+
+static bool
+nci_node_shared(uint32_t node)
+{
+	unsigned n = 0;
+
+	for (unsigned i = 0; i < core_count; i++) {
+		for (unsigned j = 0; j < cores[i].nodes; j++) {
+			n += cores[i].node[j] == node;
+		}
+	}
+	return n > 1;
+}
+
+static uint32_t
+nci_cflags(const struct core *c, uint32_t mask, uint32_t val)
+{
+	if (c->dmp == 0) {
+		return 0;
+	}
+	if (mask || val) {
+		uint32_t w = (bp_rd(c->dmp) & ~mask) | val;
+
+		bp_wr(c->dmp, w);
+		for (unsigned i = 0; i < 5000 && bp_rd(c->dmp) != w; i++) {
+			delay(1);
+		}
+	}
+	return bp_rd(c->dmp);
+}
+
+/* up: out of reset on its first node that is its own */
+static bool
+nci_isup(const struct core *c)
+{
+	for (unsigned j = 0; j < c->nodes; j++) {
+		if (!nci_node_shared(c->node[j])) {
+			return (bp_rd(c->node[j] + NI_IDM_RESET_CONTROL) & NI_IDM_RESET_ENTRY) == 0;
+		}
+	}
+	return false;
+}
+
+static void
+nci_reset(const struct core *c, uint32_t bits, uint32_t resetbits, bool enable)
+{
+	nci_cflags(c, SICF_FGC | SICF_CLOCK_EN, 0);
+	delay(1);
+	nci_cflags(c, ~(SICF_FGC | SICF_CLOCK_EN), bits | resetbits);
+	for (int j = (int)c->nodes - 1; j >= 0; j--) {
+		uint32_t r = c->node[j] + NI_IDM_RESET_CONTROL;
+
+		if (nci_node_shared(c->node[j])) {
+			continue;
+		}
+		bp_wr(r, bp_rd(r) | NI_IDM_RESET_ENTRY);
+		for (unsigned i = 0; i < 5000 && !(bp_rd(r) & NI_IDM_RESET_ENTRY); i++) {
+			delay(1);
+		}
+	}
+	nci_cflags(c, SICF_CLOCK_EN, SICF_CLOCK_EN);
+	nci_cflags(c, SICF_FGC, SICF_FGC);
+	delay(1);
+	nci_cflags(c, SICF_FGC | SICF_CLOCK_EN, 0);
+	if (!enable) {
+		return;
+	}
+	for (int j = (int)c->nodes - 1; j >= 0; j--) {
+		uint32_t r = c->node[j] + NI_IDM_RESET_CONTROL;
+
+		if (nci_node_shared(c->node[j])) {
+			continue;
+		}
+		bp_wr(r, bp_rd(r) & ~NI_IDM_RESET_ENTRY);
+		for (unsigned i = 0; i < 5000 && (bp_rd(r) & NI_IDM_RESET_ENTRY); i++) {
+			delay(1);
+		}
+	}
+	nci_cflags(c, SICF_CLOCK_EN, SICF_CLOCK_EN);
+	nci_cflags(c, SICF_FGC, SICF_FGC);
+	delay(1);
+	nci_cflags(c, SICF_FGC, 0);
+}
+
+static void
+nci_say(const struct core *c, const char *name, const char *when)
+{
+	printf("wifi: 2: %s %s: %s, DMP control 0x%08x%s; reset control/status", name, when, nci_isup(c) ? "up" : "IN RESET",
+	    c->dmp ? bp_rd(c->dmp) : 0, c->dmp && (bp_rd(c->dmp) & SICF_CPUHALT) ? " (halted)" : "");
+	for (unsigned j = 0; j < c->nodes; j++) {
+		printf(" %08x:%x/%x%s", c->node[j], bp_rd(c->node[j] + NI_IDM_RESET_CONTROL),
+		    bp_rd(c->node[j] + NI_IDM_RESET_STATUS), nci_node_shared(c->node[j]) ? "(shared)" : "");
+	}
+	printf("\n");
+}
+
+/*
+ * The 4398's step 2 (Google's driver: dhdpcie_dongle_attach, dhdpcie_cto_init, dhdpcie_check_reset_sysmem,
+ * si_sysmem_size, __dhdpcie_bus_download_state's DOWNLOAD_STATE_ENTER for an ARM CA7): the completion timeout on
+ * (the 4398 after rev 0: threshold 0x61a80, clock check 10, on), the ARM's power domain asked for, the sysmem out of
+ * reset if it is not, its size from its banks (the ROM's skipped: coreinfo's 31:24 ROM banks and 23:16 RAM banks from
+ * sysmem rev 12, each bank 8 KB x (bankinfo 6:0 + 1)), its RAM at its second slave address (Google: si_addrspace(
+ * CORE_SLAVE_PORT_1, CORE_BASE_ADDR_1) on an NCI chip -- 0x2a0000 here); then the CA7 halted and out of reset
+ * (si_core_reset(SICF_CPUHALT, SICF_CPUHALT), unless it is so already). The chip's memory is not written yet.
+ */
+#define CTO_CTRL_4398           0x8a061a80u
+#define SYSMEM_COREINFO         0x00
+#define SYSMEM_BANKIDX          0x10
+#define SYSMEM_BANKINFO         0x40
+
+static bool
+bcm4398_step2(void)
+{
+	struct core *ca7 = core_find(CORE_ARM_CA7), *sm = core_find(CORE_SYSMEM);
+
+	if (ca7 == NULL || sm == NULL) {
+		printf("wifi: 2: no %s core: stopped\n", ca7 == NULL ? "ARM CA7" : "sysmem");
+		return false;
+	}
+	if (!announce(2, "writes: completion timeout on, the ARM's domain powered, the sysmem up and sized, the CA7 halted")) {
+		return false;
+	}
+	wr(cfg, CFG_INT_MASK, CFG_INT_MASK_CTO | CFG_INT_MASK_SERR);
+	pcie_wr(PCIE_CPL_TO_CTRL, CTO_CTRL_4398);
+	{
+		uint32_t r = pcie_rd(PCIE_POWER_CONTROL);
+		unsigned i;
+
+		if ((r & (SRPWR_ARM_DOMAIN << SRPWR_REQ_SHIFT)) == 0) {
+			pcie_wr(PCIE_POWER_CONTROL, r | (SRPWR_ARM_DOMAIN << SRPWR_REQ_SHIFT));
+		}
+		for (i = 0; i < 1000 && !(pcie_rd(PCIE_POWER_CONTROL) & (SRPWR_ARM_DOMAIN << SRPWR_STATUS_SHIFT)); i++) {
+			delay(10);
+		}
+		printf("wifi: 2: power control 0x%08x -> 0x%08x%s; completion timeout 0x%08x\n", r,
+		    pcie_rd(PCIE_POWER_CONTROL), i == 1000 ? " (the ARM domain did NOT come on)" : "",
+		    pcie_rd(PCIE_CPL_TO_CTRL));
+	}
+	nci_say(ca7, "ARM CA7", "as found");
+	nci_say(sm, "sysmem", "as found");
+	if (!nci_isup(sm)) {
+		nci_reset(sm, 0, 0, true);
+		nci_say(sm, "sysmem", "after its reset");
+	}
+	{
+		uint32_t ci = bp_rd(sm->base + SYSMEM_COREINFO), size = 0;
+		unsigned rom = sm->rev >= 12 ? (ci >> 24) & 0xff : (ci >> 5) & 0x1f;
+		unsigned ram = sm->rev >= 12 ? (ci >> 16) & 0xff : ci & 0x1f;
+
+		for (unsigned b = 0; b < ram && b < 64; b++) {
+			bp_wr(sm->base + SYSMEM_BANKIDX, rom + b);
+			size += 8192u * ((bp_rd(sm->base + SYSMEM_BANKINFO) & 0x7f) + 1);
+		}
+		ram_base = sm->addrs > 2 ? sm->addr[2] : 0x2a0000;
+		ram_size = size;
+		printf("wifi: 2: sysmem coreinfo 0x%08x: %u ROM banks, %u RAM banks, %u bytes of RAM at 0x%08x (its slave "
+		    "addresses %u: 0x%08x 0x%08x 0x%08x)\n", ci, rom, ram, size, ram_base, sm->addrs, sm->addr[0], sm->addr[1],
+		    sm->addr[2]);
+	}
+	if (!(nci_isup(ca7) && (nci_cflags(ca7, 0, 0) & SICF_CPUHALT))) {
+		nci_reset(ca7, SICF_CPUHALT, SICF_CPUHALT, true);
+	}
+	nci_say(ca7, "ARM CA7", "halted");
+	return true;
 }
 
 /* (aiutils' _ai_core_reset: Google's driver resets the ARM this way) */
@@ -3926,7 +4119,9 @@ bcm_steps(void)
 	/* the Pixel 8's BCM4398: interconnect type 6 (NCI), its cores listed by nci_scan; nothing further yet */
 	if (((bp_rd(CC_BASE + CC_CHIPID) >> 28) & 0xf) == 6) {
 		nci_scan();
-		printf("wifi: 1: the 4398's steps after the cores are not written yet: stopped (nothing written)\n");
+		if (bcm4398_step2()) {
+			printf("wifi: 2: the 4398's steps after the halt are not written yet: stopped (its memory not written)\n");
+		}
 		return false;
 	}
 	if (!erom_scan()) {
