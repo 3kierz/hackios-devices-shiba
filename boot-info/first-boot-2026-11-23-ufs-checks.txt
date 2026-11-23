@@ -1,0 +1,194 @@
+===== HakiOS U-Boot on zuma: from here, U-Boot, the loader and the kernel =====
+Core:  9 devices, 8 uclasses, devicetree: separate
+MMC:   
+Loading Environment from nowhere... OK
+In:    nulldev
+Out:   vidconsole
+Err:   vidconsole
+Net:   No ethernet found.
+[oosexgang] display: DECON0 trigger unmasked
+[oosexgang] watchdog 0x10060000: WTCON 0x1af39, WTDAT 65455, WTCNT 49298: counting, stopped
+[oosexgang] watchdog 0x10070000: WTCON 0x18021, WTDAT 32768, WTCNT 32768: counting, stopped
+[oosexgang] watchdog 0x10060000: kept as a net, as slow as it counts (WTCON 0x1ff39)
+[oosexgang] touch: before: LDO4M 0x3c, LDO25M 0x2c, reset pin CON 0x22220022 DAT 0xab
+[oosexgang] touch: powered, out of reset: LDO4M 0xbc (AVDD), LDO25M 0xac (DVDD), reset pin DAT 0xab
+[oosexgang] panel: google-bigsurf.84a050 (the kernel's panel_name=bigsurf)
+[oosexgang] ufs checks: to the log only
+scanning bus for devices...
+[oosexgang] ufs: as the bootloader left it: HCE 0x1 HCS 0x10f IS 0x400 UIC 0x17/0x0 UEC PA 0x80000010 DL 0x0 N 0x0 T 0x0 DME 0x0
+[oosexgang] ufs: UniPro clock 178000000 Hz (from the bootloader's count; the bootloader's 1 us count 178)
+[oosexgang] ufs: PHY out of isolation (PMU 0x1); IO coherency 0x13 -> 0x13
+[oosexgang] ufs: device powered: vcc gpp0 CON 0x2010 DAT 0x8 -> 0x2010 0x2; gph5 CON 0x21 PUD 0x1 -> 0x22 0x0
+[oosexgang] ufs: link up: 2 of 2 lanes connected, the device's max HS gear 4 (PWM-G1 for now)
+[oosexgang] ufs: the device answers (NOP IN after 1 tries)
+[oosexgang] ufs: device initialised in 2 ms
+[oosexgang] ufs: the device's reference clock: 38.4 MHz (bRefClkFreq 2; the PHY's tables are for 38.4)
+[oosexgang] ufs: PWM-G1: LUN 0 block 0 read in 10163 us: crc32 161dd6f8, bytes 0x1fe 55 aa
+[oosexgang] ufs: HS-G4 rate B, 2/2 lanes active
+[oosexgang] ufs: HS-G4: LUN 0 block 0 read in 2881 us: crc32 161dd6f8, bytes 0x1fe 55 aa
+[oosexgang] ufs: up from cold (UFSHCI 3.0, list at 00000000efe00000), read only
+  Device 0: (0:0) Vendor: SAMSUNG Prod.: KLUDG4UHGC-B0E1 Rev: 3203
+            Type: Hard Disk
+            Capacity: 121860.0 MB = 119.0 GB (31196160 x 4096)
+  Device 1: (0:1) Vendor: SAMSUNG Prod.: KLUDG4UHGC-B0E1 Rev: 3203
+            Type: Hard Disk
+            Capacity: 32.0 MB = 0.0 GB (8192 x 4096)
+  Device 2: (0:2) Vendor: SAMSUNG Prod.: KLUDG4UHGC-B0E1 Rev: 3203
+            Type: Hard Disk
+            Capacity: 32.0 MB = 0.0 GB (8192 x 4096)
+  Device 3: (0:3) Vendor: SAMSUNG Prod.: KLUDG4UHGC-B0E1 Rev: 3203
+            Type: Hard Disk
+            Capacity: 4.0 MB = 0.0 GB (1024 x 4096)
+
+Partition Map for scsi device 0  --   Partition Type: EFI
+
+Part	Start LBA	End LBA		Name
+	Attributes
+	Type GUID
+	Partition GUID
+  1	0x00000006	0x00008005	"persist"
+	attrs:	0x0002000000000000
+	type:	ebd0a0a2-b9e5-4433-87c0-68b6b72699c7
+		(data)
+  2	0x00008006	0x00009005	"klog"
+	attrs:	0x0000000000000000
+	type:	ebd0a0a2-b9e5-4433-87c0-68b6b72699c7
+		(data)
+  3	0x00009006	0x00009105	"misc"
+	attrs:	0x0000000000000000
+	type:	ebd0a0a2-b9e5-4433-87c0-68b6b72699c7
+		(data)
+  4	0x00009106	0x00009185	"frp"
+	attrs:	0x0000000000000000
+	type:	ebd0a0a2-b9e5-4433-87c0-68b6b72699c7
+		(data)
+  5	0x00009186	0x0000d185	"efs"
+	attrs:	0x0002000000000000
+	type:	ebd0a0a2-b9e5-4433-87c0-68b6b72699c7
+		(data)
+  6	0x0000d186	0x00011185	"efs_backup"
+	attrs:	0x0002000000000000
+	type:	ebd0a0a2-b9e5-4433-87c0-68b6b72699c7
+		(data)
+  7	0x00011186	0x00015185	"modem_userdata"
+	attrs:	0x0000000000000000
+	type:	ebd0a0a2-b9e5-4433-87c0-68b6b72699c7
+		(data)
+  8	0x00015186	0x00019185	"trusty_persist"
+	attrs:	0x0000000000000000
+	type:	ebd0a0a2-b9e5-4433-87c0-68b6b72699c7
+		(data)
+  9	0x00019186	0x00021185	"trusty_userdata"
+	attrs:	0x0000000000000000
+	type:	ebd0a0a2-b9e5-4433-87c0-68b6b72699c7
+		(data)
+ 10	0x00021186	0x00025185	"metadata"
+	attrs:	0x0000000000000000
+	type:	ebd0a0a2-b9e5-4433-87c0-68b6b72699c7
+		(data)
+ 11	0x00025186	0x00025385	"fips"
+	attrs:	0x0000000000000000
+	type:	ebd0a0a2-b9e5-4433-87c0-68b6b72699c7
+		(data)
+ 12	0x00025386	0x00025785	"ufs_internal"
+	attrs:	0x0000000000000000
+	type:	ebd0a0a2-b9e5-4433-87c0-68b6b72699c7
+		(data)
+ 13	0x00025786	0x00029785	"boot_a"
+	attrs:	0x0000000000000000
+	type:	ebd0a0a2-b9e5-4433-87c0-68b6b72699c7
+		(data)
+ 14	0x00029786	0x00029f85	"init_boot_a"
+	attrs:	0x0000000000000000
+	type:	ebd0a0a2-b9e5-4433-87c0-68b6b72699c7
+		(data)
+ 15	0x00029f86	0x0002df85	"vendor_boot_a"
+	attrs:	0x0000000000000000
+	type:	ebd0a0a2-b9e5-4433-87c0-68b6b72699c7
+		(data)
+ 16	0x0002df86	0x00031f85	"vendor_kernel_boot_a"
+	attrs:	0x0000000000000000
+	type:	ebd0a0a2-b9e5-4433-87c0-68b6b72699c7
+		(data)
+ 17	0x00031f86	0x00032f85	"dtbo_a"
+	attrs:	0x0000000000000000
+	type:	ebd0a0a2-b9e5-4433-87c0-68b6b72699c7
+		(data)
+ 18	0x00032f86	0x00032f95	"vbmeta_a"
+	attrs:	0x0000000000000000
+	type:	ebd0a0a2-b9e5-4433-87c0-68b6b72699c7
+		(data)
+ 19	0x00032f96	0x00032fa5	"vbmeta_system_a"
+	attrs:	0x0000000000000000
+	type:	ebd0a0a2-b9e5-4433-87c0-68b6b72699c7
+		(data)
+ 20	0x00032fa6	0x00032fb5	"vbmeta_vendor_a"
+	attrs:	0x0000000000000000
+	type:	ebd0a0a2-b9e5-4433-87c0-68b6b72699c7
+		(data)
+ 21	0x00032fb6	0x000330b5	"pvmfw_a"
+	attrs:	0x0000000000000000
+	type:	ebd0a0a2-b9e5-4433-87c0-68b6b72699c7
+		(data)
+ 22	0x000330b6	0x0003f8b5	"modem_a"
+	attrs:	0x0000000000000000
+	type:	ebd0a0a2-b9e5-4433-87c0-68b6b72699c7
+		(data)
+ 23	0x0003f8b6	0x000438b5	"boot_b"
+	attrs:	0x0000000000000000
+	type:	ebd0a0a2-b9e5-4433-87c0-68b6b72699c7
+		(data)
+ 24	0x000438b6	0x000440b5	"init_boot_b"
+	attrs:	0x0000000000000000
+	type:	ebd0a0a2-b9e5-4433-87c0-68b6b72699c7
+		(data)
+ 25	0x000440b6	0x000480b5	"vendor_boot_b"
+	attrs:	0x0000000000000000
+	type:	ebd0a0a2-b9e5-4433-87c0-68b6b72699c7
+		(data)
+ 26	0x000480b6	0x0004c0b5	"vendor_kernel_boot_b"
+	attrs:	0x0000000000000000
+	type:	ebd0a0a2-b9e5-4433-87c0-68b6b72699c7
+		(data)
+ 27	0x0004c0b6	0x0004d0b5	"dtbo_b"
+	attrs:	0x0000000000000000
+	type:	ebd0a0a2-b9e5-4433-87c0-68b6b72699c7
+		(data)
+ 28	0x0004d0b6	0x0004d0c5	"vbmeta_b"
+	attrs:	0x0000000000000000
+	type:	ebd0a0a2-b9e5-4433-87c0-68b6b72699c7
+		(data)
+ 29	0x0004d0c6	0x0004d0d5	"vbmeta_system_b"
+	attrs:	0x0000000000000000
+	type:	ebd0a0a2-b9e5-4433-87c0-68b6b72699c7
+		(data)
+ 30	0x0004d0d6	0x0004d0e5	"vbmeta_vendor_b"
+	attrs:	0x0000000000000000
+	type:	ebd0a0a2-b9e5-4433-87c0-68b6b72699c7
+		(data)
+ 31	0x0004d0e6	0x0004d1e5	"pvmfw_b"
+	attrs:	0x0000000000000000
+	type:	ebd0a0a2-b9e5-4433-87c0-68b6b72699c7
+		(data)
+ 32	0x0004d1e6	0x000599e5	"modem_b"
+	attrs:	0x0000000000000000
+	type:	ebd0a0a2-b9e5-4433-87c0-68b6b72699c7
+		(data)
+ 33	0x000599e6	0x002561e5	"super"
+	attrs:	0x0000000000000000
+	type:	ebd0a0a2-b9e5-4433-87c0-68b6b72699c7
+		(data)
+ 34	0x002561e6	0x01dc03fa	"userdata"
+	attrs:	0x0000000000000000
+	type:	ebd0a0a2-b9e5-4433-87c0-68b6b72699c7
+		(data)
+
+scsi read: device 0 block # 0, count 8 ... 8 blocks read: OK
+CRC32 for 900000000 ... 900007fff ==> 2fa99268
+
+scsi read: device 0 block # 31196159, count 1 ... 1 blocks read: OK
+CRC32 for 900000000 ... 900000fff ==> 4bd66ab1
+
+scsi read: device 0 block # 196608, count 1024 ... 1024 blocks read: OK
+CRC32 for 900000000 ... 9003fffff ==> 1147406a
+[oosexgang] ufs checks: done

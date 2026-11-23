@@ -89,6 +89,12 @@ The work that has to come first, and is safe: a U-Boot driver that gives the loa
    had failed only on reads with data: PRD entries larger than the controller's 4 KB.) The log stopped in the partition
    list, the watchdog's net most likely (the screen scrolling before the caches are on): the checks go to the log only
    next.
+   **Run 8, 2026-11-23: checked against Android.** With the checks to the log only, all of LUN 0's table listed (34
+   partitions, `userdata` sda34 the last, 0x2561e6..0x1dc03fa) and the reads in HS-G4 give Android's own hashes: the
+   first 8 blocks crc32 **2fa99268**, the last block (31196159) **4bd66ab1** -- both as read with `dd` in Android. A
+   4 MB read (1024 blocks from 196608, four 1 MB requests) also done (crc32 1147406a). Then hakios load, the loader and
+   the kernel ran as before. **Phase 1, steps 1-3: done.** Left for the loader to use it: the storage handed on through
+   EFI's block I/O (or the loader's own reads), for the kernel's `drivers/storage/hakios.ufs.c`.
 2. U-Boot's SCSI/block layer on top, so `part list` shows the GPT, and the loader sees the disks through EFI.
 3. Read only, checked against Android: the same blocks read in U-Boot and in Android (`dd`), hashes compared.
 
