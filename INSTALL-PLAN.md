@@ -303,6 +303,9 @@ ad hoc signed by ldid -S, which leaves the code directory's flags 0, and the ker
 CS_ADHOC ones as platform. It now takes a signature with no CMS signer as ad hoc (kern_minimac.c). The 8a never met
 this: with Apple's cache hidden its jobs were not cache jobs. (Also seen, not fatal: com.hakios.thermalstate's
 executable missing.)
+**Twenty-sixth boot: iOS booted** from darwin (your report, from the screen). No log came back: the run did not end in
+a panic, which restarts the phone with the log buffer kept; it was ended from the buttons, a hard reset after which the
+bootloader reports no console-ramoops. Next: end a run with a software restart (iOS's own Restart) to keep the log.
 
 1. `darwin-write.py`: the root volume and the cryptexes into `darwin`, read back and compared; the data volume made.
 2. Boot as now, `fastboot boot`, with `root_apfs=ufs_darwin var_hfs=ufs_darwin_data ufs=2` (the shiba configuration's
