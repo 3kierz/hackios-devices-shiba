@@ -54,6 +54,7 @@
 extern int akita_acpm_xfer(unsigned channel, uint32_t cmd[4]);
 extern int akita_thermal_hottest_c(void);
 extern int akita_thermal_skin_mc(void);
+extern int akita_thermal_soc_mc(void);
 extern processor_t cpu_to_processor(int cpu);
 extern kern_return_t processor_info(processor_t processor, processor_flavor_t flavor, host_t *host,
     processor_info_t info, mach_msg_type_number_t *count);
@@ -315,6 +316,7 @@ static struct controller ctls[] = {
 };
 #undef N_
 #define NCTLS (sizeof(ctls) / sizeof(ctls[0]))
+static bool soc_guard;                  /* soc_therm's guard on: everything at its lowest */
 static int cd_state[NCDEV];             /* the result: each cooling device's state (0 none) */
 static uint64_t pid_last;               /* when the controllers last ran */
 
@@ -494,6 +496,24 @@ android_thermal_step(void)
 		}
 		any |= sev > 0;
 	}
+	/*
+	 * (11-24) The board's guard: soc_therm at or above 55 C puts every cluster and the GPU at their lowest and the
+	 * charge current at its least, until it is under 53 C. The thermal driver powers the phone off at 58 C three
+	 * readings in a row, and a speed test while charging reached it (skin 47.5 C, severity 4, the PID ceilings not
+	 * enough): slow is better than off.
+	 */
+	{
+		int soc = akita_thermal_soc_mc();
+		bool was = soc_guard;
+
+		soc_guard = soc >= 55000 || (soc_guard && soc >= 53000);
+		if (soc_guard != was) {
+			printf("akita dvfs: soc_therm %d.%d C: %s\n", soc / 1000, (soc % 1000) / 100,
+			    soc_guard ? "everything at its lowest until under 53 C" : "the guard released");
+			level_changed = true;
+		}
+		any |= soc_guard;
+	}
 	nanoseconds_to_absolutetime(7 * NSEC_PER_SEC, &seven);
 	if (!level_changed && (!any || now < pid_last + seven)) {
 		return false;
@@ -516,6 +536,11 @@ android_thermal_step(void)
 			int want = c->request[b] > c->bind[b].limit[c->severity] ? c->request[b] : c->bind[b].limit[c->severity];
 			want = want < c->bind[b].ceiling[c->severity] ? want : c->bind[b].ceiling[c->severity];
 			next[c->bind[b].cdev] = want > next[c->bind[b].cdev] ? want : next[c->bind[b].cdev];
+		}
+	}
+	if (soc_guard) {
+		for (int d = 0; d < NCDEV; d++) {
+			next[d] = cd_states[d] - 1;
 		}
 	}
 	for (int d = 0; d < NCDEV; d++) {

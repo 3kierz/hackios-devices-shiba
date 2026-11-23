@@ -185,6 +185,15 @@ akita_thermal_skin_mc(void)
 	return thermal_skin_mc;
 }
 
+/* soc_therm, the board by the SoC, in millidegrees (-273000 while not read): hakios.akita_dvfs.c's guard under the stop */
+int akita_thermal_soc_mc(void);
+
+int
+akita_thermal_soc_mc(void)
+{
+	return ntc_mc[NTC_SOC] ? ntc_mc[NTC_SOC] : -273000;
+}
+
 int
 akita_thermal_skin_charge_mc(void)
 {

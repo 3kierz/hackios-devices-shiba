@@ -525,6 +525,11 @@ video was about to start (no panic in the log, USB dropping repeatedly before). 
 **Run 24 (wifi_noagg=3):** the firmware took all three settings (0, 0, 0); joined; YouTube played (one video refused
 "error licensing": DRM, FairPlay, not here); no PHYTX error, no trap, no reset. It is the image now (wifi_noagg=3 in
 place of 1 in the arguments above). =2 to be tried again when the reset of run 23 is understood.
+**Run 24, a speed test:** the phone went off -- not a crash: the thermal stop, soc_therm (the board by the SoC) at 58 C
+three times in a row, with the skin at 47.5 C (severity 4), the battery 46 C, charging, the clusters already capped
+(LITTLE 610, MID 712, BIG 880 MHz) and MID 60 % busy (video and pages decoded on the CPU). Now a guard below the stop
+(hakios.akita_dvfs.c): soc_therm at 55 C puts every cluster and the GPU at their lowest and the charge current at its
+least, until under 53 C. (Run 23's reset may have been the same stop: its log ended without the line.)
 
 1. `darwin-write.py`: the root volume and the cryptexes into `darwin`, read back and compared; the data volume made.
 2. Boot as now, `fastboot boot`, with `root_apfs=ufs_darwin var_hfs=ufs_darwin_data ufs=2` (the shiba configuration's
