@@ -241,6 +241,9 @@ ignores that when the graft point already has content, as ours does.
 **Twelfth boot:** os.dmg and os.dmg.root_hash open; os.dmg.trustcache is required. The IPSW's own seals and trust caches
 of both cryptexes (Firmware/096-57245-083.dmg.* the OS, 096-57613-084.dmg.* the App) now go into the boot volume's
 cryptex1/current (from sysimage/cryptex1, out of git).
+**Thirteenth boot:** every object opened, the manifest spec selected, then launchd halted: "failed to realpath chosen
+im4m: -1: 9" -- the apticket's absence is "permitted" but a later step resolves its path. An empty apticket.d16ap.im4m
+stand-in now (a device's signed manifest is not in the IPSW; the graft that would use it fails and is ignored).
 
 1. `darwin-write.py`: the root volume and the cryptexes into `darwin`, read back and compared; the data volume made.
 2. Boot as now, `fastboot boot`, with `root_apfs=ufs_darwin var_hfs=ufs_darwin_data ufs=2` (the shiba configuration's
