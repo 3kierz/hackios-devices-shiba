@@ -459,6 +459,11 @@ firmware's supplicant keyed the link. 363 frames posted in those 2 s. The tx pos
 (dhd_prot_txdata: 802.3, prio << 5, one segment, data after the Ethernet header, phase 0); its station-mode flow ring
 is one per priority with the first frame's destination, as ours. Next boot: each of the first 24 frames said as it is
 sent, and the totals in the halt report.
+**Run 15:** the same trap (pc 0x3bd468). At the halt: 295 frames sent, the longest 1242 bytes, IPv4 265, IPv6 22, ARP 8
+-- ordinary frames (the per-frame lines were overwritten in the kernel's buffer between the logger's reconnects). The
+host_cap written is 0x10000000 (EDL ring) with IPC version 0; Google's dhd_set_host_cap() ORs in the active IPC version
+(9 here) and, for this firmware's flags, HOSTRDY, DS_NO_OOB_DW, EXTENDED_TRAP_DATA, UR_FW_NO_TRAP: 0x10821409. Next boot:
+wifi_hostcap=0x10821409 (aggregation still off).
 
 1. `darwin-write.py`: the root volume and the cryptexes into `darwin`, read back and compared; the data volume made.
 2. Boot as now, `fastboot boot`, with `root_apfs=ufs_darwin var_hfs=ufs_darwin_data ufs=2` (the shiba configuration's
