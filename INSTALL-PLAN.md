@@ -205,6 +205,12 @@ program through dyld and the shared cache" (hello_dyn: execve "Unknown error"). 
 region (check_np) and never asks to map one: its own checks of the arm64e cache fail first. Lead, not yet followed: the
 kernel's user pointer authentication (osfmk/arm64/hakios_pac.c, boot-arg hakios_pac, off by default) -- the arm64e
 userland and its shared cache are PAC-signed; how the 8a ran 16.6.1 d16ap with it is to be found next.
+**Fifth boot (a local kernel trace, `hakios_trace1=1`: process 1's failing open/stat/fcntl with their paths):** dyld
+looks for the cache in `/System/Library/Caches/com.apple.dyld/` on the root volume -- ENOENT, Apple's 16.6.1 root has no
+such folder (the cache lives only in the OS cryptex) -- and gives up. On iOS 16 Apple's dyld runs libignition for process
+1, which points dyld at `/private/preboot/Cryptexes/OS/`; here it did not. libignition's boot-args (read out of
+/usr/lib/dyld): ignition_level, ignition_force_dylib_root=cryptex|livefs|rootfs, ignition_live_app_graft,
+ignition_halt_after. Next: `ignition_force_dylib_root=cryptex` (the cryptex is already mounted there). PAC is not it.
 
 1. `darwin-write.py`: the root volume and the cryptexes into `darwin`, read back and compared; the data volume made.
 2. Boot as now, `fastboot boot`, with `root_apfs=ufs_darwin var_hfs=ufs_darwin_data ufs=2` (the shiba configuration's
