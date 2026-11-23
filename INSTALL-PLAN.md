@@ -342,6 +342,9 @@ mediaserverd still restarts (the Metal assertion).
 mediaserverd: shown no GPU device (metal=1), it still describes compute pipelines; the function is nil and Metal's
 -[MTLComputePipelineDescriptorInternal setComputeFunction:] asserts. inject_media.c (libhakios.media, inserted in
 mediaserverd) now leaves a nil function out and says who described it (image:symbol, the first three times).
+**Thirty-fourth boot:** the guard in ("takes no nil"); no assertion, one mediaserverd for the whole run (it had
+been 15 in 3 minutes). It never said "left out": with the method replaced no nil reached it, so who described the
+pipeline is still not known.
 
 1. `darwin-write.py`: the root volume and the cryptexes into `darwin`, read back and compared; the data volume made.
 2. Boot as now, `fastboot boot`, with `root_apfs=ufs_darwin var_hfs=ufs_darwin_data ufs=2` (the shiba configuration's
