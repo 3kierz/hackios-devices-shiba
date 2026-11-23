@@ -286,6 +286,12 @@ into /private/var with the var skeleton; the kernel's software keybag answers a 
 **Twenty-second boot:** the file found, but "Could not create dictionary from stream": MKB reads systembag.kb as a
 property list. From MobileKeyBag's strings (dyld_shared_cache_arm64e.15): KeyBagKeys (data, must not be empty),
 KeyBagVersion, OpaqueStuff. The stand-in is now such a plist.
+**Twenty-third boot (the run visibly longer):** "DONE MKB_INIT"; usermanagerd created the mobile user (uid 501) and
+loaded the persona; boot tasks dirs_cleaner, xpcroleaccountd, init_featureflags, auearlyboot, tzinit, finish-restore,
+sysstatuscheck, prng_seedctl ran; then launchd_cache_loader aborted ("Failed to create SecStaticCodeRef
+errSecCSStaticCodeNotFound": HakiOS hides Apple's xpc/launchd.plist so that launchd runs its curated LaunchDaemons) and
+launchd panicked. The loader has its own switch, boot-arg launchd_unsecure_cache=PATH; the build now writes a
+launchd.plist of HakiOS's own (Apple's, its LaunchDaemons replaced by HakiOS's 421) into the xpc folder init binds.
 
 1. `darwin-write.py`: the root volume and the cryptexes into `darwin`, read back and compared; the data volume made.
 2. Boot as now, `fastboot boot`, with `root_apfs=ufs_darwin var_hfs=ufs_darwin_data ufs=2` (the shiba configuration's
