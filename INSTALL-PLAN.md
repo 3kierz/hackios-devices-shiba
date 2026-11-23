@@ -485,6 +485,9 @@ and the bootloader kept nothing (RST_STAT PIN_RESET, no HakiOS lines). After a r
 watchdog and U-Boot's hakios_failed reset after 60 s -- both resets that lose the log. Now the loader stops the cluster-0
 watchdog once its log is written (xnuloader/loader.c, wdt_stop_for_log) and hakios_failed waits, saying to hold the
 power button: the reset that keeps it.
+**Run 20:** YouTube plays music over Wi-Fi (the tester). 43 MB in, ~16600 frames out, no halt; at most 112 frames
+waiting, 3768 refused with all 128 buffers full. No crash: the same boot at 599 s, backboardd still pid 39; the screen
+went off and on (RequestPowerChange 0/1) -- a lock, not a restart.
 
 1. `darwin-write.py`: the root volume and the cryptexes into `darwin`, read back and compared; the data volume made.
 2. Boot as now, `fastboot boot`, with `root_apfs=ufs_darwin var_hfs=ufs_darwin_data ufs=2` (the shiba configuration's
