@@ -444,6 +444,11 @@ IOSurface drawables, the surfaces' seeds, CoreAnimation's window server on the G
 11's CoreAnimation library: QuartzCore's default.metallib, which this 16.6.1 image lacks (only default.pipelinelib), from
 the iPhone 11's 16.5 (20F66) through tools/ca-metallib.py (CA_QC_METALLIB=) into ~/ca-share; without it every client
 but none aborts. METAL_PLUGIN=ca builds here against the Mali library (11.9 MB).
+The 8a's repositories, 2026-11-23: Martinvlba/hakios-xnu-kernel's akita-port has 6 commits past this tree, all iOS 27
+(xnu-12377, iOS 27.2.1's stock jobs, Apple's APFS kext, /redwood renamed /akita, the tree renamed hakios-base);
+Martinvlba/hakios-devices-akita's drivers match shiba's but for that rename and shiba's own changes, its one new piece
+a USB CDC-ACM serial console beside usbmux (hakios.akita_serial.c). Neither carries the CoreAnimation library: the
+8a's bootrun.sh still takes it from ~/ca-share, the iPhone 11's.
 
 1. `darwin-write.py`: the root volume and the cryptexes into `darwin`, read back and compared; the data volume made.
 2. Boot as now, `fastboot boot`, with `root_apfs=ufs_darwin var_hfs=ufs_darwin_data ufs=2` (the shiba configuration's
