@@ -480,6 +480,11 @@ default (16 in flight) and a frame past it waits in its send buffer, posted as t
 from d2h_tx_poll); only with all 128 buffers full is one refused. Aggregation still off (wifi_noagg=1).
 **Run 19 (queued, 16 in flight):** joined; an IPv4 address by DHCP and IPv6 of the network; TCP connections to
 port 443 made one after another, no halt in the 18 s the log covers (it ends there).
+Then, loading YouTube, the whole system crashed and the phone restarted: the USB log ends at 344 s (WebKit starting),
+and the bootloader kept nothing (RST_STAT PIN_RESET, no HakiOS lines). After a run comes back the loader set a 30 s
+watchdog and U-Boot's hakios_failed reset after 60 s -- both resets that lose the log. Now the loader stops the cluster-0
+watchdog once its log is written (xnuloader/loader.c, wdt_stop_for_log) and hakios_failed waits, saying to hold the
+power button: the reset that keeps it.
 
 1. `darwin-write.py`: the root volume and the cryptexes into `darwin`, read back and compared; the data volume made.
 2. Boot as now, `fastboot boot`, with `root_apfs=ufs_darwin var_hfs=ufs_darwin_data ufs=2` (the shiba configuration's
