@@ -211,6 +211,10 @@ such folder (the cache lives only in the OS cryptex) -- and gives up. On iOS 16 
 1, which points dyld at `/private/preboot/Cryptexes/OS/`; here it did not. libignition's boot-args (read out of
 /usr/lib/dyld): ignition_level, ignition_force_dylib_root=cryptex|livefs|rootfs, ignition_live_app_graft,
 ignition_halt_after. Next: `ignition_force_dylib_root=cryptex` (the cryptex is already mounted there). PAC is not it.
+**Sixth boot:** libignition now printed its state: boot spec **ramdisk** (it reads `rd=md0` from the boot-args), two
+stages, hello and goodbye -- the cryptex stages and the fallback are skipped. `rd=md0` is only how the kernel starts (the
+boot volume first, init then switches to the flash). A local kernel change: after kern.hakios_switch_root succeeds, the
+kernel's boot-args (what kern.bootargs returns) have `rd=` renamed `r_=` (hakios_keep_rd=1 leaves it).
 
 1. `darwin-write.py`: the root volume and the cryptexes into `darwin`, read back and compared; the data volume made.
 2. Boot as now, `fastboot boot`, with `root_apfs=ufs_darwin var_hfs=ufs_darwin_data ufs=2` (the shiba configuration's
