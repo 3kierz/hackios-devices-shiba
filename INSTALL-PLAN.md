@@ -229,6 +229,11 @@ volumes by role, 236-byte entries, the mount point at +32 and the role at +232).
 ahead in dyld: the `local` plan's 7 stages are hello, preboot, cryptex1 sniff, graft fetch (tolerates a missing image:
 "continuing"), graft select (with ignition_force_dylib_root=cryptex: "overriding os cryptex root", needing the graft point
 we mount), dylib cache, goodbye. The boot volume now has `cryptex1` (a local line in the kernel tree's build.sh).
+**Tenth boot:** past `cryptex1 sniff` -- and `graft` IS in the plan (the read-ahead was wrong): "os: opening preboot
+subdirectory: cryptex1/current ... failed to open object directory: 2". Its objects (from dyld's strings): os.dmg,
+os.dmg.root_hash, os.dmg.trustcache, an apticket...im4m, and app.* the same; then graftdmg, whose failure is ignored when
+the graft point already has content ("cryptex content already available"), as ours does. Next: an empty
+cryptex1/current, so that libignition lists which objects it requires.
 
 1. `darwin-write.py`: the root volume and the cryptexes into `darwin`, read back and compared; the data volume made.
 2. Boot as now, `fastboot boot`, with `root_apfs=ufs_darwin var_hfs=ufs_darwin_data ufs=2` (the shiba configuration's
