@@ -154,6 +154,15 @@ back: the proven copies of LUN 0's first and last 8 blocks (backups/20261123), w
 3. Reboot to fastboot, `fastboot -w` (Android makes `userdata` again at its new size), Android set up again.
    **This is where your data goes.**
 
+**Phase 3 done, 2026-11-23 (your decision):** the phone's LUN 0 table read again first: byte for byte the backed-up one at
+both ends; the new table's two files pushed and their hashes checked on the phone. Three writes from Android's root shell
+(`su -c sh`, the script on standard input -- `su -c '...'` split by adb ran only `cd` as root, copied nothing, and the
+table was checked unchanged before going on), each read back from the flash with the page cache dropped: the primary
+table (LBA 2..3), its header (LBA 1), the backup (LBA 31196156..31196159); then both copies read fresh and checked on the
+computer (CRCs right, 64 entries, the same). The bootloader agrees (`getvar partition-size`: userdata 0x136a01a000,
+darwin 0x8001fb000). `fastboot -w` erased userdata and metadata (formatted by Android at its first boot), and the phone
+restarted. `darwin.json` copied to devices/shiba/boot-info/ (ignored by git) for darwin-write.py.
+
 ## Phase 4: iOS on the partition
 
 1. `darwin-write.py`: the root volume and the cryptexes into `darwin`, read back and compared; the data volume made.
