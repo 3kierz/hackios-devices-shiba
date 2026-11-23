@@ -64,8 +64,9 @@ The work that has to come first, and is safe: a U-Boot driver that gives the loa
    DME_HIBERNATE_EXIT fails without the PHY's own wake-up writes (HCS power-mode status 5, PWR_FATAL_ERROR). Google's
    driver runs Samsung's CAL `pre_h8_exit` before the exit; **zuma's CAL is not public** (only gs101's and gs201's are),
    and zuma's PHY does not hold gs201's values (read: COMN 0x00/0x04/0x20 = 0x11/0/0, not 0x86/0x08/0x60), so gs201's
-   are not written. **Next: zuma's own writes, traced on the phone's Android** (`events/rwmmio`: Android puts the link
-   into Hibern8 and out of it many times a second), or the 8a author's U-Boot.
+   are not written. This phone's Android has no kernel tracing, but zuma's CAL is compiled into its own UFS module
+   (`vendor_kernel_boot`'s `ufs-exynos-gs.ko`, not stripped): `pre_h8_exit` read out of it (PMA common 0x0 = 0x11, 10 us,
+   each lane 0x9f4 = 0, 0xa00 = 0x30, 0xb64 = 0x32 then 0x22), and U-Boot now writes those before the exit.
 2. U-Boot's SCSI/block layer on top, so `part list` shows the GPT, and the loader sees the disks through EFI.
 3. Read only, checked against Android: the same blocks read in U-Boot and in Android (`dd`), hashes compared.
 

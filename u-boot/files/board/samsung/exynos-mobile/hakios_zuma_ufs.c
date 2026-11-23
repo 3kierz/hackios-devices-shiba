@@ -60,6 +60,26 @@
 #define VS_UTRL_NEXUS_TYPE	(VS + 0x40)	/* a bit a slot: 1 = a SCSI command (Google's exynos_ufs_set_nexus_t_xfer_req) */
 #define VS_CLKSTOP_CTRL		(VS + 0xb0)	/* bits 4:0 stop the reference, M-PHY APB, UniPro clocks (gated in Hibern8) */
 #define CLKSTOP_MASK		0x1f
+#define CLKSTOP_MPHY_APB	BIT(3)
+
+/*
+ * zuma's own PHY steps before a Hibern8 exit: Samsung's CAL table pre_h8_exit, read out of the phone's own Android
+ * module (vendor_kernel_boot's ufs-exynos-gs.ko, symbol pre_h8_exit; zuma's CAL source is not public, and its values are
+ * nothing like gs201's). Layers as gs201's CAL numbers them (3 PMA common, 4 PMA lane, 17 PMA lane squelch, 18 a wait),
+ * a lane's registers 0x800 apart (gs201's PHY_PMA_LANE_OFFSET), every entry for every gear and board.
+ */
+#define UFS_PMA			0x13204000UL
+#define PMA_LANE		0x800
+#define LANES			2
+struct pma_step { u16 reg; u8 val; u8 lane; u8 wait_us; };
+static const struct pma_step pre_h8_exit[] = {
+	{ 0x000, 0x11, 0, 0 },		/* PMA common */
+	{ 0, 0, 0, 10 },		/* 10 us */
+	{ 0x9f4, 0x00, 1, 0 },		/* each lane: squelch */
+	{ 0xa00, 0x30, 1, 0 },
+	{ 0xb64, 0x32, 1, 0 },		/* each lane */
+	{ 0xb64, 0x22, 1, 0 },
+};
 #define UIC_HIBERN8_EXIT	0x18
 #define HCS_UCRDY		BIT(3)
 #define IS_UHXS			BIT(5)		/* Hibern8 exit done */
@@ -321,7 +341,31 @@ static int zuma_ufs_probe(struct udevice *dev)
 	}
 	/* the link out of Hibern8, if the bootloader left it there */
 	if (rd(u, UFSHC_UICCMD) == UIC_HIBERN8_ENTER) {
-		u32 is, res;
+		u32 is, res, cs = rd(u, VS_CLKSTOP_CTRL);
+
+		/* zuma's PHY steps first (Google's exynos_ufs_hibern8_notify: the clocks on, then the CAL's pre_h8_exit), the
+		 * M-PHY's APB clock let run around the PHY's registers as the CAL's accessors do */
+		wr(u, VS_CLKSTOP_CTRL, cs & ~CLKSTOP_MASK);
+		printf("[oosexgang] ufs: PHY before: COMN 0x0=%#x", readl(UFS_PMA));
+		for (int l = 0; l < LANES; l++)
+			printf("; lane %d 0x9f4=%#x 0xa00=%#x 0xb64=%#x", l, readl(UFS_PMA + 0x9f4 + PMA_LANE * l),
+			       readl(UFS_PMA + 0xa00 + PMA_LANE * l), readl(UFS_PMA + 0xb64 + PMA_LANE * l));
+		printf("\n");
+		for (int i = 0; i < ARRAY_SIZE(pre_h8_exit); i++) {
+			const struct pma_step *st = &pre_h8_exit[i];
+
+			if (st->wait_us) {
+				udelay(st->wait_us);
+				continue;
+			}
+			for (int l = 0; l < (st->lane ? LANES : 1); l++)
+				writel(st->val, UFS_PMA + st->reg + PMA_LANE * l);
+		}
+		printf("[oosexgang] ufs: PHY after zuma's pre_h8_exit: COMN 0x0=%#x", readl(UFS_PMA));
+		for (int l = 0; l < LANES; l++)
+			printf("; lane %d 0x9f4=%#x 0xa00=%#x 0xb64=%#x", l, readl(UFS_PMA + 0x9f4 + PMA_LANE * l),
+			       readl(UFS_PMA + 0xa00 + PMA_LANE * l), readl(UFS_PMA + 0xb64 + PMA_LANE * l));
+		printf("\n");
 
 		if (!(rd(u, UFSHC_HCS) & HCS_UCRDY)) {
 			printf("[oosexgang] ufs: the link is in Hibern8 and the UIC is not ready: not woken\n");
@@ -336,23 +380,25 @@ static int zuma_ufs_probe(struct udevice *dev)
 			;
 		is = rd(u, UFSHC_IS);
 		res = rd(u, UFSHC_UICCMDARG2) & 0xff;
-		printf("[oosexgang] ufs: the link out of Hibern8: %s (IS %#x, UIC result %u, HCS %#x: power-mode status %u)\n",
-		       (is & IS_UHXS) && !res ? "done" : "NOT done", is, res, rd(u, UFSHC_HCS), (rd(u, UFSHC_HCS) >> 8) & 7);
-		wr(u, UFSHC_IS, is & (IS_UCCS | IS_UHXS));
-		if (!(is & IS_UHXS) || res)
-			return -EIO;
+		{
+			u32 pm = (rd(u, UFSHC_HCS) >> 8) & 7;	/* UPMCRS: 1 PWR_LOCAL is a done exit (Linux's check) */
+
+			printf("[oosexgang] ufs: the link out of Hibern8: %s (IS %#x, UIC result %u, HCS %#x: power-mode status %u)\n",
+			       (is & IS_UHXS) && !res && pm == 1 ? "done" : "NOT done", is, res, rd(u, UFSHC_HCS), pm);
+			wr(u, UFSHC_IS, is & (IS_UCCS | IS_UHXS));
+			if (!(is & IS_UHXS) || res || pm != 1)
+				return -EIO;
+		}
 	}
 	/* Samsung's controller: the clocks the bootloader may have stopped for Hibern8 running again, and slot 0 a SCSI
 	 * command's (as Google's driver does on the way out of Hibern8 and for every request) */
 	{
 		u32 stop = rd(u, VS_CLKSTOP_CTRL), nexus = rd(u, VS_UTRL_NEXUS_TYPE);
 
-		if (stop & CLKSTOP_MASK)
-			wr(u, VS_CLKSTOP_CTRL, stop & ~CLKSTOP_MASK);
 		if (!(nexus & 1))
 			wr(u, VS_UTRL_NEXUS_TYPE, nexus | 1);
-		printf("[oosexgang] ufs: vendor: clock stops %#x -> %#x, nexus types %#x -> %#x\n", stop,
-		       rd(u, VS_CLKSTOP_CTRL), nexus, rd(u, VS_UTRL_NEXUS_TYPE));
+		printf("[oosexgang] ufs: vendor: clock stops %#x, nexus types %#x -> %#x\n", stop, nexus,
+		       rd(u, VS_UTRL_NEXUS_TYPE));
 	}
 	plat->max_id = 1;
 	plat->max_lun = 8;
