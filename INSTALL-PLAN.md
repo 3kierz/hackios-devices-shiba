@@ -392,6 +392,11 @@ tools/bootrun.sh builds with both. The user space is now built as
   LOCKDOWND=1 BLUETOOTH=1 LDID=~/theos/toolchain/linux/iphone/bin/ldid XNU_CLANG_DIR=~/theos/toolchain/linux/iphone/bin
   STATIC_ARCH=arm64 NO_SYSTEM=1 CRYPTEXES=flash FLASHBOOT=1 REST=1 userland/build.sh
 (429 jobs: lockdownd, bluetoothd, bluetoothuserd, the BTServer profiles).
+**Run 7:** lockdownd answered (36 of 36 connections); two breaks only (the Apple logo, one later). 120 Hz
+(display_hz=120): 120 frames a second while the screen is simple, 10 when widget extensions start (no GPU Metal: all
+drawn by the CPU). The flashlight: the LM3644 answers, /dev/hakios-torch. Bluetooth (bt=2): BCM.hcd loaded, the
+controller BCM4398D0 G5SN_V17_SB3, opened by bluetoothd. Wi-Fi steps 5 and 6: the rings up, "ver" 24.100.671.86.1 d0,
+the MAC read, the 4398's CLM and txcap loaded (status 0). Next: wifi=8 (radio up and a scan, en0, the station).
 
 1. `darwin-write.py`: the root volume and the cryptexes into `darwin`, read back and compared; the data volume made.
 2. Boot as now, `fastboot boot`, with `root_apfs=ufs_darwin var_hfs=ufs_darwin_data ufs=2` (the shiba configuration's
