@@ -54,6 +54,12 @@
 #define UFSHC_UICCMDARG2	0x98
 #define UFSHC_UICCMDARG3	0x9c
 #define UIC_HIBERN8_ENTER	0x17
+/* Samsung's vendor HCI registers, 0x1100 past the standard ones (Linux's ufs-exynos.h; the probe read the PRDT entry sizes
+ * Google's driver sets, 0xc, at +0 and +4) */
+#define VS			0x1100
+#define VS_UTRL_NEXUS_TYPE	(VS + 0x40)	/* a bit a slot: 1 = a SCSI command (Google's exynos_ufs_set_nexus_t_xfer_req) */
+#define VS_CLKSTOP_CTRL		(VS + 0xb0)	/* bits 4:0 stop the reference, M-PHY APB, UniPro clocks (gated in Hibern8) */
+#define CLKSTOP_MASK		0x1f
 #define UIC_HIBERN8_EXIT	0x18
 #define HCS_UCRDY		BIT(3)
 #define IS_UHXS			BIT(5)		/* Hibern8 exit done */
@@ -335,6 +341,18 @@ static int zuma_ufs_probe(struct udevice *dev)
 		wr(u, UFSHC_IS, is & (IS_UCCS | IS_UHXS));
 		if (!(is & IS_UHXS) || res)
 			return -EIO;
+	}
+	/* Samsung's controller: the clocks the bootloader may have stopped for Hibern8 running again, and slot 0 a SCSI
+	 * command's (as Google's driver does on the way out of Hibern8 and for every request) */
+	{
+		u32 stop = rd(u, VS_CLKSTOP_CTRL), nexus = rd(u, VS_UTRL_NEXUS_TYPE);
+
+		if (stop & CLKSTOP_MASK)
+			wr(u, VS_CLKSTOP_CTRL, stop & ~CLKSTOP_MASK);
+		if (!(nexus & 1))
+			wr(u, VS_UTRL_NEXUS_TYPE, nexus | 1);
+		printf("[oosexgang] ufs: vendor: clock stops %#x -> %#x, nexus types %#x -> %#x\n", stop,
+		       rd(u, VS_CLKSTOP_CTRL), nexus, rd(u, VS_UTRL_NEXUS_TYPE));
 	}
 	plat->max_id = 1;
 	plat->max_lun = 8;
