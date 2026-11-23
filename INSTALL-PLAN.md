@@ -314,6 +314,9 @@ to the loader: the screen stalls, the power button is held, and the log should b
 loader arms a 30 s watchdog after the kernel returns (WDT_BITE_MS), and it bit first (CLUSTER0_NONCPU_WDTRESET).
 Every run so far: a button reset (PIN_RESET) kept the HakiOS log; a watchdog or software reset (SYSTEM_SWRESET)
 did not. So: once the screen stops, hold the power button within about 20 s.
+**Twenty-ninth boot:** held at once, still CLUSTER0_NONCPU_WDTRESET: the watchdog bit during the shutdown itself.
+The kernel feeds it from a thread call (loader_return.c), which stops as it halts; the loader feeds it while it
+waits only for loader_return_after + 60 s. Now loader_return_after=86400: the loader feeds it the whole run (a day).
 
 1. `darwin-write.py`: the root volume and the cryptexes into `darwin`, read back and compared; the data volume made.
 2. Boot as now, `fastboot boot`, with `root_apfs=ufs_darwin var_hfs=ufs_darwin_data ufs=2` (the shiba configuration's
