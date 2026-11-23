@@ -362,6 +362,10 @@ the bus at the Apple logo) and only appends.
 CA7 halted by reset with SICF_CPUHALT and let go by clearing that bit; the vars and random seed below the top of RAM;
 the reset vector at address 0. Step 2 now: completion timeout 0x8a061a80, the ARM's domain, the sysmem up and sized
 from its banks, the CA7 halted (NCI's way: DMP control at the OOBR header + 8, IDM reset at node + 0x140); then stops.
+**Wi-Fi 3:** step 2 ran as Google's driver expects: the CA7 as found up and halted (DMP control 0x21), the sysmem up,
+coreinfo 0x0b201000: 11 ROM banks, 32 RAM banks, 4 MB of RAM at 0x2a0000 (to 0x69ffff, the sysmem's slave range);
+the ARM's domain on, completion timeout 0x8a061a80. Next, the firmware (d0). The calibration is named by the module's
+vendor id in the chip's OTP (bcmdhd.cal_USI_..., then _4398_d0, then bcmdhd.cal): this phone's is not in fw-wifi/ yet.
 
 1. `darwin-write.py`: the root volume and the cryptexes into `darwin`, read back and compared; the data volume made.
 2. Boot as now, `fastboot boot`, with `root_apfs=ufs_darwin var_hfs=ufs_darwin_data ufs=2` (the shiba configuration's
