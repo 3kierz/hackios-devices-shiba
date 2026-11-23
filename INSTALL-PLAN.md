@@ -95,6 +95,13 @@ The work that has to come first, and is safe: a U-Boot driver that gives the loa
    4 MB read (1024 blocks from 196608, four 1 MB requests) also done (crc32 1147406a). Then hakios load, the loader and
    the kernel ran as before. **Phase 1, steps 1-3: done.** Left for the loader to use it: the storage handed on through
    EFI's block I/O (or the loader's own reads), for the kernel's `drivers/storage/hakios.ufs.c`.
+   **Run 9, 2026-11-23: the loader and the kernel read it.** U-Boot now brings the storage up (HS-G4) and scans it at
+   every boot (`hakios_ufs=1`); the loader, unchanged, finds it through UEFI: 4 raw units (LUN 0 and the three boot
+   LUNs), every unit's GPT header and table CRCs right, 62 partitions. With `ufs=2 ufs_check=2` the kernel made
+   `/dev/ufs_NAME` for all 62 and read through the loader's page (`ufs_hvc=1`): **402 requests, 420 MB, 0 errors**,
+   590 ms in ReadBlocks (about 700 MB/s); abl_a and abl_b hash the same in the kernel as in the loader. (modem_a/b are
+   200 MB here, smaller than the 214 MB the check's list asks for: "read failed (22)" at their end, as expected.) The
+   loader's log write into `klog` is refused by U-Boot, as meant. **Phase 1: done.**
 2. U-Boot's SCSI/block layer on top, so `part list` shows the GPT, and the loader sees the disks through EFI.
 3. Read only, checked against Android: the same blocks read in U-Boot and in Android (`dd`), hashes compared.
 
