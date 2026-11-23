@@ -427,6 +427,10 @@ default.metallib this 16.6.1 image lacks (tools/ca-metallib.py).
 **Run 11 (metal=2): stuck at the Apple logo** -- SpringBoard and mediaserverd aborted over and over (432 and 434
 times), each just after the Mali made a context for it. Back to metal=1, with userland/build.sh's new METAL_CLIENTS
 (HakiosMetal.clients beside the bundle): the device shown to MetalTest and metal_test only.
+**Run 12 (hot, per the tester):** SoC 60-70 C, skin 44.6-45.1 C (severity 3: the CPU budgets cut), the battery 22 C,
+its charge current held down by the heat; nothing crash-looping. The flashlight's going off was its own 30 s limit
+(torch_max_s). From 20:48 Windows reset the bus every 5-30 s with the phone's side configured and no stall before it.
+MetalTest's results are on the console (usbmux port 1), not in the kernel's log.
 
 1. `darwin-write.py`: the root volume and the cryptexes into `darwin`, read back and compared; the data volume made.
 2. Boot as now, `fastboot boot`, with `root_apfs=ufs_darwin var_hfs=ufs_darwin_data ufs=2` (the shiba configuration's
