@@ -20,7 +20,7 @@ For HakiOS to read the partition, our U-Boot needs a UFS (storage) driver, which
 | Your data in it | **81 GB used of 110 GB** |
 | Identity/radio partitions | `persist`, `efs`, `efs_backup`, `modem_userdata`, `trusty_persist`, `trusty_userdata` (LUN 0, before `userdata`): never written by this plan |
 | Boot chain | Google's bootloader on other LUNs (`sdb`, `sdc`, `sdd`): never written by this plan |
-| iOS images built | `userland/root.apfs` (small image, 33 MB), `system.apfs` (being built: about 2.5 GB), from your 16.6.1 IPSW |
+| iOS images built | `userland/root.apfs` (small image, 33 MB), from your 16.6.1 IPSW. `system.apfs` (about 2.5 GB) **not yet**: its build stalled in `tools/apfs/mkapfs.py` three minutes in (eight workers idle, its spool unchanged for 7.5 hours) and was stopped, 2026-11-23; to be made again before phase 4 (one worker, or the stall found) |
 
 ## How the 8a did it, and what is different here
 
