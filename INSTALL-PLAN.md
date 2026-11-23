@@ -464,6 +464,10 @@ sent, and the totals in the halt report.
 host_cap written is 0x10000000 (EDL ring) with IPC version 0; Google's dhd_set_host_cap() ORs in the active IPC version
 (9 here) and, for this firmware's flags, HOSTRDY, DS_NO_OOB_DW, EXTENDED_TRAP_DATA, UR_FW_NO_TRAP: 0x10821409. Next boot:
 wifi_hostcap=0x10821409 (aggregation still off).
+**Run 16 (host_cap 0x10821409): NO HALT.** Joined (5500 MHz, -63 dBm), frames both ways: the first sends ordinary
+(IPv6 ND and MLD, DHCP to port 67), 227 received (152 KB). Then a background scan from wifid at 279-281 s (status 5,
+WLC_E_STATUS_NO_ACK) and from there nothing in, and the tx completions stopped at 212 of 340: 128 out, the rest
+dropped. Next boot: the same with wifi_console=5 (the firmware's console every 5 s) to see the stall from its side.
 
 1. `darwin-write.py`: the root volume and the cryptexes into `darwin`, read back and compared; the data volume made.
 2. Boot as now, `fastboot boot`, with `root_apfs=ufs_darwin var_hfs=ufs_darwin_data ufs=2` (the shiba configuration's
