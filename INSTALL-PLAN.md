@@ -82,6 +82,13 @@ The work that has to come first, and is safe: a U-Boot driver that gives the loa
    PWM-G1; `zuma ufs hs` then asks for HS-G4 rate B (the CAL's `pre_pmc`/`post_pmc` around the power mode change). The
    only request that writes anything to the device is SET FLAG fDeviceInit (its own initialisation, which every host
    does at every boot); SCSI stays on the read-only list.
+   **Run 7, 2026-11-23: it reads.** The link up on both lanes, the device initialised in 2 ms, bRefClkFreq 38.4 MHz;
+   LUN 0 block 0 read in PWM-G1 (10 ms) and, after the switch, in **HS-G4 rate B on 2 lanes** (3 ms), both crc32
+   161dd6f8 -- the same 4 KB Android reads (sda-head.bin). `scsi scan`: the Samsung KLUDG4UHGC-B0E1, LUN 0 31,196,160
+   blocks of 4 KB, LUNs 1-3 the boot LUNs (32, 32, 4 MB); `part list` reads LUN 0's GPT (persist ... userdata). (Run 6
+   had failed only on reads with data: PRD entries larger than the controller's 4 KB.) The log stopped in the partition
+   list, the watchdog's net most likely (the screen scrolling before the caches are on): the checks go to the log only
+   next.
 2. U-Boot's SCSI/block layer on top, so `part list` shows the GPT, and the loader sees the disks through EFI.
 3. Read only, checked against Android: the same blocks read in U-Boot and in Android (`dd`), hashes compared.
 
