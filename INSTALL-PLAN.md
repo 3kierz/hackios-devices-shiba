@@ -190,6 +190,11 @@ kernel (9 cores, the boot volume mounted as md0) ran; then `/sbin/launchd` (Haki
 our static raw-syscall programs (init, child, stage0, var_store) were built arm64e with ptrauth ABI version 0, which the
 kernel refuses as process 1 (as hello was). A local `STATIC_ARCH=arm64` in the kernel tree's userland/build.sh builds
 those four plain arm64; Apple's programs stay arm64e. Rebuilt with it.
+**Second boot from darwin:** HakiOS's init mounted Apple's root volume from darwin and switched to it ("/flash is the
+root now"), both cryptexes mounted from behind it (SydneyG20G81.D16SystemCryptex, container 1; AppCryptex, container 2),
+and Apple's launchd ran as process 1 -- then exited: "failed to query hardware target: 22". The loader's identity.h was
+the placeholder (no IPSW when it was first made); `xnuloader/mkidentity.sh` made it from the IPSW's d16ap device tree
+(model, compatible, target-type; kept out of git), and mk-first-boot.sh now refuses FLASH_ROOT=1 with the placeholder.
 
 1. `darwin-write.py`: the root volume and the cryptexes into `darwin`, read back and compared; the data volume made.
 2. Boot as now, `fastboot boot`, with `root_apfs=ufs_darwin var_hfs=ufs_darwin_data ufs=2` (the shiba configuration's

@@ -46,6 +46,11 @@ echo "mk-first-boot.sh: user space: $hello"
 # arguments), the two cryptexes behind it. Without ufs_write=1 nothing is written: /private/var is in memory.
 if [ -n "${FLASH_ROOT:-}" ]; then
 	[ -f userland/flashboot.apfs ] || { echo "mk-first-boot.sh: no userland/flashboot.apfs (FLASHBOOT=1 userland/build.sh)" >&2; exit 1; }
+	# Darwin's launchd asks for the iPhone it runs on ("failed to query hardware target: 22" with the placeholder,
+	# 2026-11-23): the loader has to carry that iPhone's identity, xnuloader/mkidentity.sh (from sysimage's device tree)
+	if grep -q hakios-placeholder xnuloader/identity.h; then
+		echo "mk-first-boot.sh: xnuloader/identity.h is the placeholder: run xnuloader/mkidentity.sh first" >&2; exit 1
+	fi
 	disks="resident=userland/flashboot.apfs ramdisk=userland/root.apfs"
 	echo "mk-first-boot.sh: flash root: flashboot.apfs $(( $(stat -c %s userland/flashboot.apfs) / 1048576 )) MB (md0), root.apfs $(( $(stat -c %s userland/root.apfs) / 1048576 )) MB (md1)"
 elif [ -n "${FW_IMAGE:-}" ]; then
