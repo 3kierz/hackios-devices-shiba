@@ -19,8 +19,14 @@
  *   5. the device: NOP OUT until NOP IN, fDeviceInit set and polled until the device clears it (Linux's
  *      ufshcd_verify_dev_init and ufshcd_complete_dev_init), and each logical unit's power-on UNIT ATTENTION collected.
  *
- * The link is then in PWM-G1 (slow: a few MB/s, enough for the tables and checks); "zuma ufs hs" (hk_zuma_ufs_hs) asks
- * for HS-G4 rate B on every connected lane, with the CAL's pre_pmc and post_pmc around the power mode change.
+ * The link is then in PWM-G1 (slow: a few MB/s, enough for the tables and checks); one block is read as a test, and
+ * "zuma ufs hs" (hk_zuma_ufs_hs; in the probe when $hakios_ufs_hs is 1, or the PWM-G1 read failed) asks for HS-G4 rate B
+ * on every connected lane, with the CAL's pre_pmc and post_pmc around the power mode change.
+ *
+ * Run 6 (2026-11-23): the link up on both lanes, NOP IN at once, fDeviceInit done, bRefClkFreq 38.4 MHz; TEST UNIT READY,
+ * INQUIRY and READ CAPACITY answered; every 4 KB READ(10) not done in 10 s (IS: a UIC error), and the ten of them the
+ * watchdog's net. So: PRD entries of 4 KB as Google's driver (max_segment_size 4096), 2 s and then no more requests,
+ * the error registers at the failure, and the test reads.
  *
  * What reaches the device: the UPIUs this file builds and nothing else. Device management: NOP OUT; QUERY READ
  * ATTRIBUTE and READ FLAG; and one write request, SET FLAG fDeviceInit, the device's own initialisation every host does
@@ -42,6 +48,7 @@
 #include <malloc.h>
 #include <scsi.h>
 #include <time.h>
+#include <u-boot/crc.h>
 #include <asm/cache.h>
 #include <asm/io.h>
 #include <linux/delay.h>
@@ -188,14 +195,14 @@
 
 #define UCD_RESPONSE		512
 #define UCD_PRDT		1024
-#define PRD_MAX			SZ_256K
-#define XFER_MAX		SZ_1M		/* the most one request moves: 4 PRD entries */
+#define PRD_MAX			SZ_4K		/* Google's max_segment_size, the controller's PRDT_SET_SIZE(12) */
+#define XFER_MAX		SZ_1M		/* the most one request moves: 256 PRD entries */
 #define UCD_SIZE		(UCD_PRDT + 16 * (XFER_MAX / PRD_MAX))
 #define BLOCK			4096		/* every logical unit's block on this phone */
 #define DMA_SIZE		SZ_2M		/* the list at +0, the task list at +1 KB, the command descriptor at +4 KB,
 						 * the buffer at +1 MB */
 #define DMA_BELOW		0xf0000000UL	/* below 4 GB, and below where hakios load puts the payload */
-#define TIMEOUT_US		10000000	/* a request (1 MB in PWM-G1 takes about a second) */
+#define TIMEOUT_US		2000000		/* a request (the watchdog's net is about 100 s for everything) */
 
 struct zuma_ufs {
 	void __iomem *base;
@@ -208,11 +215,12 @@ struct zuma_ufs {
 	u8 *data;			/* the transfer buffer */
 	u32 mclk;
 	u8 lanes;
-	bool up, hs;
+	bool up, hs, broken;		/* broken: a request timed out, nothing more is sent */
 	u32 refused, done;
 };
 
-static struct zuma_ufs *zuma_ufs_up;	/* for "zuma ufs hs" */
+static struct zuma_ufs *zuma_ufs_up;
+int hk_zuma_ufs_hs(void);	/* for "zuma ufs hs" */
 
 static u32 rd(struct zuma_ufs *u, u32 reg) { return readl(u->base + reg); }
 static void wr(struct zuma_ufs *u, u32 reg, u32 v) { writel(v, u->base + reg); }
@@ -365,6 +373,7 @@ static int ring(struct zuma_ufs *u, u32 us)
 
 	dma_flush(u->ucd, UCD_SIZE);
 	dma_flush(u->list, 32);
+	wr(u, UFSHC_IS, rd(u, UFSHC_IS));	/* what follows is this request's */
 	dsb();
 	wr(u, UFSHC_UTRLDBR, 1);
 	start = timer_get_us();
@@ -440,6 +449,8 @@ static int zuma_ufs_exec(struct udevice *dev, struct scsi_cmd *pccb)
 
 	if (!u->up)
 		return -ENODEV;
+	if (u->broken)
+		return -EIO;
 	if (pccb->dma_dir == DMA_TO_DEVICE) {
 		u->refused++;
 		return -EPERM;		/* never: U-Boot does not write the phone's storage */
@@ -488,18 +499,25 @@ static int zuma_ufs_exec(struct udevice *dev, struct scsi_cmd *pccb)
 		dma_inval(u->data, pccb->datalen);
 	ocs = ring(u, TIMEOUT_US);
 	if (ocs == -ETIMEDOUT) {
-		printf("zuma ufs: CDB %02x lun %u not done in %u ms (IS %#x HCS %#x): the slot cleared\n", upiu[16],
-		       upiu[2], TIMEOUT_US / 1000, rd(u, UFSHC_IS), rd(u, UFSHC_HCS));
+		printf("zuma ufs: CDB %02x lun %u (%lu bytes) not done in %u ms: the slot cleared, no more requests\n",
+		       upiu[16], upiu[2], pccb->datalen, TIMEOUT_US / 1000);
+		dump(u, "after the timeout");
+		u->broken = true;
 		return ocs;
 	}
 	pccb->status = r[7];
-	if (ocs != OCS_SUCCESS || (r[0] & 0x3f) != UPIU_RESPONSE || r[6]) {
-		printf("zuma ufs: CDB %02x lun %u: OCS %#x, response %02x %02x, status %02x\n", upiu[16], upiu[2], ocs,
-		       r[0], r[6], r[7]);
+	if (ocs != OCS_SUCCESS || (r[0] & 0x3f) != UPIU_RESPONSE) {
+		printf("zuma ufs: CDB %02x lun %u: OCS %#x, UPIU %02x\n", upiu[16], upiu[2], ocs, r[0]);
+		dump(u, "after the error");
 		return -EIO;
 	}
-	if (r[7]) {			/* CHECK CONDITION and the like: the sense data after the header and its length */
+	if (r[7]) {			/* CHECK CONDITION and the like (the response byte then 1): the sense data after the
+					 * header and its length */
 		memcpy(pccb->sense_buf, r + 34, min_t(size_t, sizeof(pccb->sense_buf), 18));
+		return -EIO;
+	}
+	if (r[6]) {
+		printf("zuma ufs: CDB %02x lun %u: response %02x with GOOD status\n", upiu[16], upiu[2], r[6]);
 		return -EIO;
 	}
 	if (in) {
@@ -706,11 +724,51 @@ static int device_init(struct zuma_ufs *u)
 	return 0;
 }
 
+/* each logical unit's power-on UNIT ATTENTION collected, so the SCSI scan's first commands do not meet it */
+static void unit_attentions(struct udevice *dev)
+{
+	for (int lun = 0; lun < 8; lun++)
+		for (int t = 0; t < 2; t++) {
+			struct scsi_cmd c = { 0 };
+
+			c.lun = lun;
+			c.cmdlen = 6;
+			c.dma_dir = DMA_NONE;
+			if (!zuma_ufs_exec(dev, &c))
+				break;
+		}
+}
+
+/* LUN 0's block 0 read, timed */
+static int test_read(struct udevice *dev, const char *mode)
+{
+	static u8 buf[BLOCK] __aligned(ARCH_DMA_MINALIGN);
+	struct scsi_cmd c = { 0 };
+	ulong start = timer_get_us();
+	int ret;
+
+	c.cmd[0] = 0x28;		/* READ(10), block 0, 1 block */
+	c.cmd[8] = 1;
+	c.cmdlen = 10;
+	c.dma_dir = DMA_FROM_DEVICE;
+	c.datalen = BLOCK;
+	c.pdata = buf;
+	ret = zuma_ufs_exec(dev, &c);
+	if (ret)
+		printf(P "%s: LUN 0 block 0 NOT read (%d, status %#x, sense key %#x asc %#x/%#x)\n", mode, ret, c.status,
+		       c.sense_buf[2] & 0xf, c.sense_buf[12], c.sense_buf[13]);
+	else
+		printf(P "%s: LUN 0 block 0 read in %lu us: crc32 %08x, bytes 0x1fe %02x %02x\n", mode,
+		       timer_get_us() - start, crc32(0, buf, BLOCK), buf[0x1fe], buf[0x1ff]);
+	return ret;
+}
+
 static int zuma_ufs_probe(struct udevice *dev)
 {
 	struct zuma_ufs *u = dev_get_priv(dev);
 	struct scsi_plat *plat = dev_get_uclass_plat(dev);
 	ulong envm = env_get_ulong("hakios_ufs_mclk", 10, 0);
+	bool pwm_ok;
 	u32 bl;
 	int ret;
 
@@ -772,18 +830,28 @@ static int zuma_ufs_probe(struct udevice *dev)
 		return ret;
 	u->up = true;
 	zuma_ufs_up = u;
+	unit_attentions(dev);
 
-	/* each logical unit's power-on UNIT ATTENTION collected, so the SCSI scan's first commands do not meet it */
-	for (int lun = 0; lun < 8; lun++)
-		for (int t = 0; t < 2; t++) {
-			struct scsi_cmd c = { 0 };
-
-			c.lun = lun;
-			c.cmdlen = 6;
-			c.dma_dir = DMA_NONE;
-			if (!zuma_ufs_exec(dev, &c))
-				break;
-		}
+	/*
+	 * One block read before the SCSI scan, to see the data path on its own: in PWM-G1, and in HS-G4 when $hakios_ufs_hs
+	 * is 1 or PWM-G1 failed (the controller and the device brought up again first, as after any failed request).
+	 */
+	pwm_ok = !test_read(dev, "PWM-G1");
+	if (!pwm_ok) {
+		u->up = false;
+		u->broken = false;
+		ret = link_up(u);
+		if (!ret)
+			ret = device_init(u);
+		if (ret)
+			return ret;
+		u->up = true;
+		unit_attentions(dev);
+	}
+	if (!pwm_ok || env_get_yesno("hakios_ufs_hs") == 1) {
+		if (!hk_zuma_ufs_hs())
+			test_read(dev, "HS-G4");
+	}
 
 	plat->max_id = 1;
 	plat->max_lun = 8;
