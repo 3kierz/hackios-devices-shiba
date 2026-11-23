@@ -195,6 +195,10 @@ root now"), both cryptexes mounted from behind it (SydneyG20G81.D16SystemCryptex
 and Apple's launchd ran as process 1 -- then exited: "failed to query hardware target: 22". The loader's identity.h was
 the placeholder (no IPSW when it was first made); `xnuloader/mkidentity.sh` made it from the IPSW's d16ap device tree
 (model, compatible, target-type; kept out of git), and mk-first-boot.sh now refuses FLASH_ROOT=1 with the placeholder.
+**Third boot from darwin:** the panic now says Device D16, Hardware Model iPhone14,4; launchd got past the hardware
+query, then dyld: "Library not loaded: /usr/lib/libSystem.B.dylib ... (no such file, no dyld cache)" -- no shared cache
+mapped, and no `shared_region: ... map` refusal in the log (the kernel's APFS reads LZBITMAP, so not the compression).
+Why is earlier in the log than the loader's 16 KB excerpt shows; a local loader option `klog_echo=all` prints all of it.
 
 1. `darwin-write.py`: the root volume and the cryptexes into `darwin`, read back and compared; the data volume made.
 2. Boot as now, `fastboot boot`, with `root_apfs=ufs_darwin var_hfs=ufs_darwin_data ufs=2` (the shiba configuration's
