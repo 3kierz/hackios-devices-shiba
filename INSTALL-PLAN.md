@@ -171,6 +171,18 @@ refuses every changed GPT and every range outside darwin. (Windows' adb.exe ends
 
 ## Phase 4: iOS on the partition
 
+**Prepared on the computer, 2026-11-23:** Apple's images out of the IPSW again (iPhone14,4 16.6.1): the root filesystem
+is a UDIF image (LZFSE), its Apple_APFS partition taken out whole by 7-Zip (checksums checked) -- 1,497,600 blocks; the
+OS cryptex (708,608) and the App cryptex (2,560) are raw APFS as they come. Back to back, as the kernel finds containers
+(each where the one before it ends: `,c=1`, `,c=2`): `build/shiba/darwin/darwin-system.img`, blocks 0..2208767 of darwin
+(the loader's own note for this IPSW says the same end), SHA-256 3b6721d5...; the data area from 4194304 untouched.
+The RAM part: `NO_SYSTEM=1 CRYPTEXES=flash FLASHBOOT=1 REST=1 userland/build.sh` (NO_SYSTEM: a local switch, so the 2.5 GB
+RAM system image that stalled is not made; theos clang via XNU_CLANG_DIR): flashboot.apfs 4 MB, root.apfs 31 MB;
+`FLASH_ROOT=1 FIRST_ARGS="cpus=9 ufs=2" OUT=hakios-shiba-flash.img mk-first-boot.sh`: a 52.9 MB payload. Without
+ufs_write=1 nothing is written at boot; /private/var is a memory filesystem (init's fallback when var_hfs does not mount).
+The write itself: `fastboot flash darwin` of sparse pieces (tools/sparse-split.py), the bootloader bounding it to darwin;
+read back from Android's root shell and compared with the image's SHA-256.
+
 1. `darwin-write.py`: the root volume and the cryptexes into `darwin`, read back and compared; the data volume made.
 2. Boot as now, `fastboot boot`, with `root_apfs=ufs_darwin var_hfs=ufs_darwin_data ufs=2` (the shiba configuration's
    defaults already say so), and the small image and boot volume in the payload, as the 8a's `bootrun.sh` does.

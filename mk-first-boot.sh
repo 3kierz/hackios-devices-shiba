@@ -39,7 +39,16 @@ echo "mk-first-boot.sh: user space: $hello"
 # FW_IMAGE=userland/root.apfs: the small image carried too, as the second RAM disk (md1), hello staying the root (md0,
 # the loader's resident image): the drivers read the phone's firmware from its fw/ without a root mounted
 # (drivers/storage/hakios.image.c, hakios_image_file) -- haptic=3, amp=3, aoc=3, the Mali
-if [ -n "${FW_IMAGE:-}" ]; then
+# FLASH_ROOT=1: iOS from the phone's flash (INSTALL-PLAN.md, phase 4): the boot volume (userland/flashboot.apfs, md0,
+# resident) and the small image (userland/root.apfs, md1), both made by
+#   NO_SYSTEM=1 CRYPTEXES=flash FLASHBOOT=1 REST=1 userland/build.sh
+# and the kernel's built-in root_apfs=ufs_darwin: init mounts Apple's root volume from darwin (ufs=2 among the
+# arguments), the two cryptexes behind it. Without ufs_write=1 nothing is written: /private/var is in memory.
+if [ -n "${FLASH_ROOT:-}" ]; then
+	[ -f userland/flashboot.apfs ] || { echo "mk-first-boot.sh: no userland/flashboot.apfs (FLASHBOOT=1 userland/build.sh)" >&2; exit 1; }
+	disks="resident=userland/flashboot.apfs ramdisk=userland/root.apfs"
+	echo "mk-first-boot.sh: flash root: flashboot.apfs $(( $(stat -c %s userland/flashboot.apfs) / 1048576 )) MB (md0), root.apfs $(( $(stat -c %s userland/root.apfs) / 1048576 )) MB (md1)"
+elif [ -n "${FW_IMAGE:-}" ]; then
 	disks="resident=$hello ramdisk=$FW_IMAGE"
 	echo "mk-first-boot.sh: firmware image: $FW_IMAGE ($(( $(stat -c %s "$FW_IMAGE") / 1048576 )) MB, md1)"
 else
