@@ -740,8 +740,9 @@ controller_start(void)
 		delay(1);
 	}
 	wr(DCTL, DCTL_CSFTRST);
+	/* up to a second (Linux's dwc3 allows DWC_usb31 more than 50 ms: the clocks are synchronized first) */
 	for (unsigned i = 0; i < 100000 && (rd(DCTL) & DCTL_CSFTRST); i++) {
-		delay(1);
+		delay(10);
 	}
 	if (rd(DCTL) & DCTL_CSFTRST) {
 		printf("akita usb: the soft reset did not finish\n");
@@ -937,7 +938,19 @@ akita_usb_thread(__unused void *parameter, __unused wait_result_t result)
 	txq_lock = lck_mtx_alloc_init(usb_grp, LCK_ATTR_NULL);
 	akita_usbmux_init();
 	akita_ptp_init();
-	if (!controller_start()) {
+	/*
+	 * The Pixel 8 (2026-11-23): its U-Boot has no `eusb init` yet, so nothing has made the eUSB2 link when the kernel
+	 * starts, and the soft reset waits on the PHY's clock for good ("the soft reset did not finish"). The link made
+	 * here, as after a replug, and the controller started again.
+	 */
+	bool started = controller_start();
+
+	if (!started) {
+		printf("akita usb: the eUSB2 link made here, and the controller started again\n");
+		eusb_reinit();
+		started = controller_start();
+	}
+	if (!started) {
 		start_result = 0;
 		for (unsigned i = 0; i < 24; i++) {     /* on the screen (-v) for two minutes: why there is no USB */
 			printf("akita usb: NOT STARTED (GSNPSID %#x DCTL %#x DSTS %#x GCTL %#x)\n", rd(GSNPSID), rd(DCTL),

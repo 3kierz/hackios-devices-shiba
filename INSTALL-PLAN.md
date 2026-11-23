@@ -320,6 +320,10 @@ waits only for loader_return_after + 60 s. Now loader_return_after=86400: the lo
 **Thirtieth boot:** no console-ramoops at all. Restarts are given up as the way to the log: it is now read live over
 USB (usbmux=1, the kernel's port 1) by tools/usbmux-log.py, which now also reaches Windows' Apple Mobile Device
 Service (127.0.0.1:27015) when run with Windows' Python: no usbipd, no usbmuxd in WSL.
+**Thirty-first boot:** Windows saw no device: HakiOS's USB never started on the Pixel 8 ("akita usb: the soft reset
+did not finish"): the 8a's U-Boot made the eUSB2 link (`eusb init`) before the kernel, shiba's does not yet. The
+driver now makes it itself (eusb_reinit, its replug path) when the first start fails, and starts again; the soft
+reset is given up to a second.
 
 1. `darwin-write.py`: the root volume and the cryptexes into `darwin`, read back and compared; the data volume made.
 2. Boot as now, `fastboot boot`, with `root_apfs=ufs_darwin var_hfs=ufs_darwin_data ufs=2` (the shiba configuration's
