@@ -224,6 +224,11 @@ answered ENOTTY like every fsctl. A local kernel change answers that one request
 then "failed to get preboot mount point: 2": libignition reads the sysctl `vfs.generic.apfs.edt_fstab` (the APFS kext's
 volumes by role, 236-byte entries, the mount point at +32 and the role at +232). The kernel now has it, with one entry
 (role 0x10 on /private/preboot), there only after the root switch.
+**Ninth boot:** the `preboot` stage passes ("preboot already mounted: device = root_device, mount point =
+/private/preboot"); `cryptex1 sniff` fails (8): it only checks that the Preboot volume has a `cryptex1` directory. Read
+ahead in dyld: the `local` plan's 7 stages are hello, preboot, cryptex1 sniff, graft fetch (tolerates a missing image:
+"continuing"), graft select (with ignition_force_dylib_root=cryptex: "overriding os cryptex root", needing the graft point
+we mount), dylib cache, goodbye. The boot volume now has `cryptex1` (a local line in the kernel tree's build.sh).
 
 1. `darwin-write.py`: the root volume and the cryptexes into `darwin`, read back and compared; the data volume made.
 2. Boot as now, `fastboot boot`, with `root_apfs=ufs_darwin var_hfs=ufs_darwin_data ufs=2` (the shiba configuration's
