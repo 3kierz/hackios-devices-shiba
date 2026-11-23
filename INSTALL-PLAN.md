@@ -244,6 +244,10 @@ cryptex1/current (from sysimage/cryptex1, out of git).
 **Thirteenth boot:** every object opened, the manifest spec selected, then launchd halted: "failed to realpath chosen
 im4m: -1: 9" -- the apticket's absence is "permitted" but a later step resolves its path. An empty apticket.d16ap.im4m
 stand-in now (a device's signed manifest is not in the IPSW; the graft that would use it fails and is ignored).
+**Fourteenth boot:** the graft ran: "grafting: method = syscall, dmg = .../os.dmg ... graft point =
+/private/preboot/Cryptexes/OS" -- graftdmg: 18 (EXDEV), not tolerated. Apple's code carries on from one graft error alone,
+37 (EALREADY: "cryptex content already available"), then opens the covered graft point. A local kernel change: graftdmg
+answers EALREADY when a volume is already mounted on the graft point (init mounts each cryptex there).
 
 1. `darwin-write.py`: the root volume and the cryptexes into `darwin`, read back and compared; the data volume made.
 2. Boot as now, `fastboot boot`, with `root_apfs=ufs_darwin var_hfs=ufs_darwin_data ufs=2` (the shiba configuration's
