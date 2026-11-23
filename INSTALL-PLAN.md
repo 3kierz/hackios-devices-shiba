@@ -478,6 +478,8 @@ most 16 in flight; the host_cap back to its default, so that a halt is said agai
 minutes, link up throughout. But 8599 frames refused at the limit for iOS to send again. Now the limit is the 4398's
 default (16 in flight) and a frame past it waits in its send buffer, posted as the chip gives buffers back (tx_drain
 from d2h_tx_poll); only with all 128 buffers full is one refused. Aggregation still off (wifi_noagg=1).
+**Run 19 (queued, 16 in flight):** joined; an IPv4 address by DHCP and IPv6 of the network; TCP connections to
+port 443 made one after another, no halt in the 18 s the log covers (it ends there).
 
 1. `darwin-write.py`: the root volume and the cryptexes into `darwin`, read back and compared; the data volume made.
 2. Boot as now, `fastboot boot`, with `root_apfs=ufs_darwin var_hfs=ufs_darwin_data ufs=2` (the shiba configuration's
