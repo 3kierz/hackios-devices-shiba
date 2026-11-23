@@ -431,6 +431,12 @@ times), each just after the Mali made a context for it. Back to metal=1, with us
 its charge current held down by the heat; nothing crash-looping. The flashlight's going off was its own 30 s limit
 (torch_max_s). From 20:48 Windows reset the bus every 5-30 s with the phone's side configured and no stall before it.
 MetalTest's results are on the console (usbmux port 1), not in the kernel's log.
+**Console 13: Metal on the Mali.** MetalTest found "HakiOS Mali-G715 (Metal: buffers, blits and compute so far)" and
+draws: 19 of its 25 scenes set up and run at 40-100 frames a second (triangles, indexed draws, textures, blending, depth,
+stencil, 16384 instances, 4x MSAA, RGBA16F, three targets, ASTC, formats, lines, scissor, discard, blits, 240000
+triangles, shadow map, UIKit over Metal). Six do not, each a piece hakios-metal's plug-in lacks: generateMipmapsForTexture
+(5), a compute function from the application's library (13), array, cube and 3D textures (15), the blit's
+copyFromTexture:...toTexture: with slices and levels (20 drew, its read-back raised), layered rendering (22, 24).
 
 1. `darwin-write.py`: the root volume and the cryptexes into `darwin`, read back and compared; the data volume made.
 2. Boot as now, `fastboot boot`, with `root_apfs=ufs_darwin var_hfs=ufs_darwin_data ufs=2` (the shiba configuration's
