@@ -324,6 +324,12 @@ Service (127.0.0.1:27015) when run with Windows' Python: no usbipd, no usbmuxd i
 did not finish"): the 8a's U-Boot made the eUSB2 link (`eusb init`) before the kernel, shiba's does not yet. The
 driver now makes it itself (eusb_reinit, its replug path) when the first start fails, and starts again; the soft
 reset is given up to a second.
+**Thirty-second boot: the log live over USB** (usbmux-log.py through Windows' Apple Mobile Device Service, 808 KB):
+USB works. SpringBoard up (lock screen, status bar, battery UI), backboardd, wifid, chronod, usermanagerd. Found:
+mediaserverd restarts every few seconds (15 pids in 3 minutes), after Metal's failed assertion "computeFunction must
+not be nil" (metal=1: it is not shown the GPU); seven of our jobs (ptp, wifi, lsreg, klogsave, locfeed, memsay,
+thermalstate) "Missing executable" in /redwood/bin; the stream ended at 16:38:10 with no panic in it while the phone
+went on.
 
 1. `darwin-write.py`: the root volume and the cryptexes into `darwin`, read back and compared; the data volume made.
 2. Boot as now, `fastboot boot`, with `root_apfs=ufs_darwin var_hfs=ufs_darwin_data ufs=2` (the shiba configuration's
