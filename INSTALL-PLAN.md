@@ -339,6 +339,9 @@ entitlements (lsreg, locfeed, ...) are signed without them.
 /private/var/mobile/Media/hakios-klog, in memory), ptp_responder, lsreg (MetalTest.app registered), locfeed and the
 wifi job all ran. USB came up as Code 10 in Windows at first; a replug (the driver's own re-init) fixed it.
 mediaserverd still restarts (the Metal assertion).
+mediaserverd: shown no GPU device (metal=1), it still describes compute pipelines; the function is nil and Metal's
+-[MTLComputePipelineDescriptorInternal setComputeFunction:] asserts. inject_media.c (libhakios.media, inserted in
+mediaserverd) now leaves a nil function out and says who described it (image:symbol, the first three times).
 
 1. `darwin-write.py`: the root volume and the cryptexes into `darwin`, read back and compared; the data volume made.
 2. Boot as now, `fastboot boot`, with `root_apfs=ufs_darwin var_hfs=ufs_darwin_data ufs=2` (the shiba configuration's
