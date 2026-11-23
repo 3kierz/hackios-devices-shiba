@@ -501,7 +501,7 @@ to the panel. Built beside it, hakios-shiba-flash-full.img: the GPU arguments wi
 fbsubtype/fb_zc -- full screen, scaled, a copy a frame.
 The tester prefers full screen: it is the image now (hakios-shiba-flash.img). Its boot arguments:
   cpus=9 ufs=2 ignition_force_dylib_root=cryptex bldrlog=0xfd800000 launchd_unsecure_cache=1 loader_return_after=86400
-  wifi=8 wifi_4398=1 torch=3 bt=2 ca_metallib=/redwood/share/ca-share/QuartzCore-default.metallib
+  wifi=8 wifi_4398=1 wifi_noagg=1 torch=3 bt=2 ca_metallib=/redwood/share/ca-share/QuartzCore-default.metallib
   display_hz=120 anim_max=1                       (QUIET=1 FLASH_ROOT=1 devices/shiba/mk-first-boot.sh)
 **The flashlight went out for good** (run 21, 236 s): "off for the rest of the run" with its flags 0/0 and the skin at
 40 C -- one failed read of the flags. Now a read is tried three times and only half a second of unreadable flags, or a
@@ -509,6 +509,13 @@ fault in them, puts it out for the run; the skin over 45 C puts it out until und
 at most 1800): iOS's flashlight stays on until turned off.
 **Faster Wi-Fi:** aggregation back on (no wifi_noagg) now that 16 frames at most are in flight; TX_BUFS 256 (was 128:
 3768 refused with all full).
+**Run 22:** the flashlight stays on (85, then 100 mA, nothing cut it). Aggregation on: PHYTX errors again (15), then
+"Frequent re-inits leading to TRAP" (_hnd_die): wlc_sta_msch_off_chan_done_clbk -> wlc_txqueue_end ->
+wlc_bmac_tx_fifo_sync -> flush_tx_fifos -> mq_error -> fatal -- back from a scan's off-channel visit, its aggregated
+tx FIFOs would not flush, five re-inits, the trap; the recovery failed. Back to wifi_noagg=1 in the image. Android runs
+this firmware with aggregation; it loads the calibration, CLM and txcap by the phone's SKU (dhd_custom_google.c:
+sku_table -> MMW, ROW, NA, JPN, EU; /vendor/firmware has bcmdhd.cal_/bcmdhd_clm.blob_ NA, ROW, JP, MMW and
+bcmdhd_txcap.blob_MMW), not the _4398_d0 ones used here. The SKU is the next thing to read (ro.boot.hardware.sku).
 
 1. `darwin-write.py`: the root volume and the cryptexes into `darwin`, read back and compared; the data volume made.
 2. Boot as now, `fastboot boot`, with `root_apfs=ufs_darwin var_hfs=ufs_darwin_data ufs=2` (the shiba configuration's
