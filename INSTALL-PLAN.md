@@ -248,6 +248,11 @@ stand-in now (a device's signed manifest is not in the IPSW; the graft that woul
 /private/preboot/Cryptexes/OS" -- graftdmg: 18 (EXDEV), not tolerated. Apple's code carries on from one graft error alone,
 37 (EALREADY: "cryptex content already available"), then opens the covered graft point. A local kernel change: graftdmg
 answers EALREADY when a volume is already mounted on the graft point (init mounts each cryptex there).
+**Fifteenth boot:** graftdmg 37 now, but still "graft failed": the os cryptex's failure handler
+(_cryptex_graft_failure_exists) accepts 37 only when libignition's "userspace reboot" flag is set (configuration +7034),
+which comes from `XPC_USERSPACE_REBOOTED` in launchd's environment (_configuration_init). HakiOS's init (a local change)
+now execs Apple's launchd with XPC_USERSPACE_REBOOTED=1 on a flash boot -- the cryptexes are already in place, as after a
+user-space reboot. What launchd itself does with the variable is to be seen.
 
 1. `darwin-write.py`: the root volume and the cryptexes into `darwin`, read back and compared; the data volume made.
 2. Boot as now, `fastboot boot`, with `root_apfs=ufs_darwin var_hfs=ufs_darwin_data ufs=2` (the shiba configuration's
