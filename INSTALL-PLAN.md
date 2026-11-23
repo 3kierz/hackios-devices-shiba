@@ -397,6 +397,11 @@ tools/bootrun.sh builds with both. The user space is now built as
 drawn by the CPU). The flashlight: the LM3644 answers, /dev/hakios-torch. Bluetooth (bt=2): BCM.hcd loaded, the
 controller BCM4398D0 G5SN_V17_SB3, opened by bluetoothd. Wi-Fi steps 5 and 6: the rings up, "ver" 24.100.671.86.1 d0,
 the MAC read, the 4398's CLM and txcap loaded (status 0). Next: wifi=8 (radio up and a scan, en0, the station).
+Tested on that same boot (the wifi=8 image not yet booted): Bluetooth and the flashlight work in iOS; Wi-Fi does
+not (the image stopped at step 6 by design); swiping choppy, 2-50 frames a second while touched: no GPU Metal. Metal is
+the 8a's Mali build: tools/mesa/pan/mk-pan-host.sh and mk-pan-ios.sh (Mesa 26.2.6's panfrost compiler), then
+make -C hakios-metal ios-mali ARCH=arm64e, then userland/build.sh with HAKIOS_METAL_OUT=ios-mali (as bootrun.sh);
+this machine lacks meson, ninja, python3-mako and libdrm-dev.
 
 1. `darwin-write.py`: the root volume and the cryptexes into `darwin`, read back and compared; the data volume made.
 2. Boot as now, `fastboot boot`, with `root_apfs=ufs_darwin var_hfs=ufs_darwin_data ufs=2` (the shiba configuration's
