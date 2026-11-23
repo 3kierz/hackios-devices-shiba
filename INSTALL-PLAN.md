@@ -277,6 +277,12 @@ user-space reboot launchd expects the keybag the first boot made. So that route 
 init_userspace_reboot): the kernel's graftdmg now takes an already-mounted cryptex as grafted (success, not EALREADY),
 the stand-in AMFI accepts the trust cache libignition then loads (__mac_syscall AMFI 101), the apticket stand-in is
 not empty (it is mapped), and launchd starts as on a normal first boot.
+**Twenty-first boot: a normal first boot.** Both cryptexes "loaded trust cache"; launchd ran every boot task --
+fsck, mount-phase-1/2 ("data volume missing, but not required"), data-protection ("No SEP present"), finish-obliteration
+("No obliteration needed"), detect-installed-roots, MSUEarlyBootTask, fips ("all tests PASSED") -- then keybag:
+MKB_INIT in "No Crypto" mode only loads /private/var/keybags/systembag.kb (a restore makes it) and reboots without it.
+(The 8a never met this: its rd=md0 stayed visible, so launchd ran no boot tasks.) A systembag.kb stand-in now goes
+into /private/var with the var skeleton; the kernel's software keybag answers a load with a handle whatever it holds.
 
 1. `darwin-write.py`: the root volume and the cryptexes into `darwin`, read back and compared; the data volume made.
 2. Boot as now, `fastboot boot`, with `root_apfs=ufs_darwin var_hfs=ufs_darwin_data ufs=2` (the shiba configuration's
