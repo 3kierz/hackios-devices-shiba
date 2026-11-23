@@ -5,32 +5,65 @@ what is added, until this stops.
 
 usage: usbmux-log.py [-k] [OUTPUT]      (stdout, or OUTPUT as well; needs usbmuxd running, and access to its socket)
        -k: the kernel message buffer (port 5: printf and IOLog, which without -v are not on the console)
+
+usbmuxd: Linux's socket /var/run/usbmuxd, or else Windows' Apple Mobile Device Service (iTunes, Apple Devices) at
+127.0.0.1:27015 -- from WSL, run this with Windows' Python, which reaches it and the USB port with no usbipd:
+  python.exe "$(wslpath -w devices/shiba/tools/usbmux-log.py)" run.txt
+It waits for the phone (started before HakiOS is, it has the log from the first line the kernel still keeps).
 """
+import os
 import plistlib
 import socket
 import struct
 import sys
+import time
+
+
+def mux_socket():
+    if os.path.exists('/var/run/usbmuxd'):
+        s = socket.socket(socket.AF_UNIX)
+        s.connect('/var/run/usbmuxd')
+    else:
+        s = socket.create_connection(('127.0.0.1', 27015))
+    return s
+
+
+def recv_all(s, n):
+    data = b''
+    while len(data) < n:
+        part = s.recv(n - len(data))
+        if not part:
+            raise EOFError('usbmuxd closed the connection')
+        data += part
+    return data
+
+
+def mux_answer(s):
+    n = struct.unpack('<I', recv_all(s, 16)[:4])[0]
+    return plistlib.loads(recv_all(s, n - 16))
 
 
 def mux_connect(port):
-    s = socket.socket(socket.AF_UNIX)
-    s.connect('/var/run/usbmuxd')
-    s.sendall(struct.pack('<IIII', 16 + len(b := plistlib.dumps({'MessageType': 'ListDevices'})), 1, 8, 1) + b)
-    n = struct.unpack('<I', s.recv(16)[:4])[0]
-    data = b''
-    while len(data) < n - 16:
-        data += s.recv(n - 16 - len(data))
-    devices = plistlib.loads(data).get('DeviceList', [])
-    if not devices:
-        sys.exit('usbmux-log: no device (is usbmuxd running, the phone attached?)')
+    said = False
+    while True:
+        s = mux_socket()
+        s.sendall(struct.pack('<IIII', 16 + len(b := plistlib.dumps({'MessageType': 'ListDevices'})), 1, 8, 1) + b)
+        devices = mux_answer(s).get('DeviceList', [])
+        s.close()
+        if devices:
+            break
+        if not said:
+            print('usbmux-log: waiting for the phone (HakiOS with usbmux=1, on the cable)', file=sys.stderr)
+            said = True
+        time.sleep(1)
+    for d in devices:
+        props = d.get('Properties', {})
+        print('usbmux-log: device %s, serial %s' % (d['DeviceID'], props.get('SerialNumber', '?')), file=sys.stderr)
     device = devices[0]['DeviceID']
-    s.close()
-    s = socket.socket(socket.AF_UNIX)
-    s.connect('/var/run/usbmuxd')
+    s = mux_socket()
     body = plistlib.dumps({'MessageType': 'Connect', 'DeviceID': device, 'PortNumber': socket.htons(port)})
     s.sendall(struct.pack('<IIII', 16 + len(body), 1, 8, 2) + body)
-    n = struct.unpack('<I', s.recv(16)[:4])[0]
-    result = plistlib.loads(s.recv(n - 16))
+    result = mux_answer(s)
     if result.get('Number') != 0:
         sys.exit(f'usbmux-log: the phone refused port {port}: {result}')
     return s

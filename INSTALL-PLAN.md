@@ -317,6 +317,9 @@ did not. So: once the screen stops, hold the power button within about 20 s.
 **Twenty-ninth boot:** held at once, still CLUSTER0_NONCPU_WDTRESET: the watchdog bit during the shutdown itself.
 The kernel feeds it from a thread call (loader_return.c), which stops as it halts; the loader feeds it while it
 waits only for loader_return_after + 60 s. Now loader_return_after=86400: the loader feeds it the whole run (a day).
+**Thirtieth boot:** no console-ramoops at all. Restarts are given up as the way to the log: it is now read live over
+USB (usbmux=1, the kernel's port 1) by tools/usbmux-log.py, which now also reaches Windows' Apple Mobile Device
+Service (127.0.0.1:27015) when run with Windows' Python: no usbipd, no usbmuxd in WSL.
 
 1. `darwin-write.py`: the root volume and the cryptexes into `darwin`, read back and compared; the data volume made.
 2. Boot as now, `fastboot boot`, with `root_apfs=ufs_darwin var_hfs=ufs_darwin_data ufs=2` (the shiba configuration's
