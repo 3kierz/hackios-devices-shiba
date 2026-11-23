@@ -385,6 +385,13 @@ The ring information's layout (Google's ring_info_t) is the one step 5 reads. Ne
 4398's CLM and txcap), with torch=3 and bt=2 to try (BCM.hcd now packed) and display_hz=120 (the panel ran at 60 Hz:
 the driver keeps the bootloader's rate unless asked). Metal: this tree has no hakios-metal Mali build (out/ and
 xnu-deps/build/mesa26 absent), so the image carries the plug-in without a GPU behind it; MetalTest sees no device.
+**The USB log's breaks:** every 30-90 s Windows' Apple Mobile Device Service reset the phone (bus reset, enumerated
+again), each time after its connections to lockdownd (port 62078) were refused -- 52 of 52 in one run: the job list had
+no lockdownd. userland/build.sh puts it in only with LOCKDOWND=1, and iOS's bluetoothd only with BLUETOOTH=1; the 8a's
+tools/bootrun.sh builds with both. The user space is now built as
+  LOCKDOWND=1 BLUETOOTH=1 LDID=~/theos/toolchain/linux/iphone/bin/ldid XNU_CLANG_DIR=~/theos/toolchain/linux/iphone/bin
+  STATIC_ARCH=arm64 NO_SYSTEM=1 CRYPTEXES=flash FLASHBOOT=1 REST=1 userland/build.sh
+(429 jobs: lockdownd, bluetoothd, bluetoothuserd, the BTServer profiles).
 
 1. `darwin-write.py`: the root volume and the cryptexes into `darwin`, read back and compared; the data volume made.
 2. Boot as now, `fastboot boot`, with `root_apfs=ufs_darwin var_hfs=ufs_darwin_data ufs=2` (the shiba configuration's
