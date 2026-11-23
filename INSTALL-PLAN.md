@@ -67,6 +67,14 @@ The work that has to come first, and is safe: a U-Boot driver that gives the loa
    are not written. This phone's Android has no kernel tracing, but zuma's CAL is compiled into its own UFS module
    (`vendor_kernel_boot`'s `ufs-exynos-gs.ko`, not stripped): `pre_h8_exit` read out of it (PMA common 0x0 = 0x11, 10 us,
    each lane 0x9f4 = 0, 0xa00 = 0x30, 0xb64 = 0x32 then 0x22), and U-Boot now writes those before the exit.
+   **Run 5, the real cause:** with zuma's pre_h8_exit written (the PHY then exactly at its awake values) the exit still
+   ends in PWR_FATAL_ERROR, and the probe's pins say why: the UFS device's supply (`ufs-vcc`, gpp0-1) is an output driven
+   **low** and its reset (gph5-0) is held low -- **the bootloader powers the storage chip off** before it hands over (the
+   8a's U-Boot notes say the same: "the device's supply and pins back on"). So the controller's "device present" is stale
+   and nothing answers on the link. Adopting is not enough: U-Boot has to **bring the storage up itself** -- the supply
+   and reset, Samsung's link set-up (CAL init_cfg and the HS gear 4 calibration, all in the same Android module), the
+   UniPro link start-up, the device's initialisation (NOP, fDeviceInit), the switch to HS gear 4 -- as Google's
+   ufs-exynos.c and Linux's ufshcd do at boot. Larger work, still read only towards the storage's contents.
 2. U-Boot's SCSI/block layer on top, so `part list` shows the GPT, and the loader sees the disks through EFI.
 3. Read only, checked against Android: the same blocks read in U-Boot and in Android (`dd`), hashes compared.
 
