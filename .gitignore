@@ -7,3 +7,5 @@ __pycache__/
 private-untracked/
 # this phone's own device tree (pull-boot-info.sh, then copied): it carries the phone's identifiers, kept local
 prebuilt/device-tree.dtb
+# what tools/backup.py copies off the phone (its identity among it) and carve.py makes from it: never in git
+backups/

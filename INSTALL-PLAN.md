@@ -110,6 +110,17 @@ Writes stay off in U-Boot for good: the only write HakiOS ever makes is the kern
 
 ## Phase 2: the tools for the Pixel 8 (no risk to the phone)
 
+**Written and tried on the computer, 2026-11-23** (`devices/shiba/tools/`, sharing the facts in `shiba_install.py`; the
+kernel tree's own tools loaded and given the Pixel's facts, so their checks and refusals stay the tested ones):
+`backup.py` (backup-partitions.py with the Pixel's names: 56 partitions with `--with-bootchain`, the four LUNs' tables;
+reads only), `carve.py` (checks the table is the planned one, then userdata-carve.py `--wipe --entries 64`, then checks
+the result again and writes `darwin.json`; the computer only), `darwin-write.py` (darwin's identity from `darwin.json`,
+the LUN checked to be behind 13200000.ufs; every write refused until phase 4 places the Darwin volume).
+`tests/install-tools-test.py GPT-SDA-HEAD.BIN` runs them with no phone: on LUN 0's first blocks read under Android, 32 GiB
+gives userdata LBA 2449894..22807039 (77.66 GiB) and darwin sda35 LBA 22807040..31196154 (32.00 GiB), entries 34 and 35
+the only ones changed, both copies' CRCs right; every refusal refuses. (The backup copy of the table there is made from
+the primary; carve.py is to be run on the real one, which backup.py copies.)
+
 1. `backup-partitions.py`: the Pixel 8 list above.
 2. `userdata-carve.py --wipe`: already designed for "userdata is the last partition"; check it against your GPT
    (gpt-head.bin/gpt-tail.bin from phase 0) and run it **on the computer only**, to see the new table: `userdata`
