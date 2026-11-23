@@ -379,6 +379,12 @@ mailbox interrupt status and the ring information's address for it.
 **Wi-Fi 5 (quiet image, no -v):** the boot interrupt came after 423 ms (mailbox interrupt status 0x1), but
 pcie_shared at the first address then read all zero, its flags too. Google's driver reads the top word again after
 the boot interrupt; step 4 now does, and shows pcie_shared's first 16 words.
+**Wi-Fi 6:** after the boot interrupt the top word is 0x613800: pcie_shared flags 0x70250109 (protocol 9, DMA indices),
+mailboxes 0x613e00/0x613e04, ring information 0x61388c, the firmware's console at 0x52687c; FWID c9e90b08, Android's.
+The ring information's layout (Google's ring_info_t) is the one step 5 reads. Next boot: wifi=6 (rings, "ver", the
+4398's CLM and txcap), with torch=3 and bt=2 to try (BCM.hcd now packed) and display_hz=120 (the panel ran at 60 Hz:
+the driver keeps the bootloader's rate unless asked). Metal: this tree has no hakios-metal Mali build (out/ and
+xnu-deps/build/mesa26 absent), so the image carries the plug-in without a GPU behind it; MetalTest sees no device.
 
 1. `darwin-write.py`: the root volume and the cryptexes into `darwin`, read back and compared; the data volume made.
 2. Boot as now, `fastboot boot`, with `root_apfs=ufs_darwin var_hfs=ufs_darwin_data ufs=2` (the shiba configuration's

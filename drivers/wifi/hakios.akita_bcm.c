@@ -4419,8 +4419,9 @@ step3:
 		printf("wifi: 6: \"cur_etheraddr\": %d: %02x:xx:xx:xx:xx:%02x\n", err, mac[0], mac[5]);
 		console_say(shared);
 		if (strncmp(ver, "wl0:", 4) == 0) {
-			(void)blob_load("bcmdhd_clm.blob_4383_a3", "clmload", "clmload_status");
-			(void)blob_load("bcmdhd_txcap.blob_4383_a3", "txcapload", "txcapload_status");
+			(void)blob_load(chip_4398 ? "bcmdhd_clm.blob_4398_d0" : "bcmdhd_clm.blob_4383_a3", "clmload", "clmload_status");
+			(void)blob_load(chip_4398 ? "bcmdhd_txcap.blob_4398_d0" : "bcmdhd_txcap.blob_4383_a3", "txcapload",
+			    "txcapload_status");
 		}
 		wl_take();
 		info_rings_up();
