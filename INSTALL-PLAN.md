@@ -415,6 +415,15 @@ Settings' scans answered; a WPA2-PSK network joined from Settings (link up, keys
 The frames with odd ethertypes were flagged 0x2, BCMPCIE_PKT_FLAGS_FRAME_802_11: 802.11 management frames, now
 kept from en0. The next boot runs without Bluetooth (bt=0), to see whether the shared radio's other half is in the
 way of Wi-Fi's transmits.
+**Run 10 (bt=0):** the same: joined, then PHYTX errors and the halt 5 s later (1003 frames sent meanwhile, 0 data
+received). Bluetooth is not it. Ruled out too: the flow ring's create request and the tx post's layout (Google's
+structures, field for field), the DMA memory (write-combined, uncached), Google's preinit iovars (nothing of the
+radio's). Open.
+**Metal:** built here now -- mk-pan-host.sh, mk-pan-ios.sh (meson 1.12 from pipx; HAKIOS_METAL=the tree's
+hakios-metal), make -C hakios-metal ios-mali ARCH=arm64e; the user space with BIG_IN_ROOT=1 HAKIOS_METAL_OUT=ios-mali:
+HakiosMetal 11.6 MB with the Mali back end. metal=2 shows it to every process but backboardd: applications draw on
+the GPU; iOS's own compositing (backboardd) does not -- that is METAL_PLUGIN=ca, which also needs a CoreAnimation
+default.metallib this 16.6.1 image lacks (tools/ca-metallib.py).
 
 1. `darwin-write.py`: the root volume and the cryptexes into `darwin`, read back and compared; the data volume made.
 2. Boot as now, `fastboot boot`, with `root_apfs=ufs_darwin var_hfs=ufs_darwin_data ufs=2` (the shiba configuration's
