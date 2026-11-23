@@ -2746,6 +2746,7 @@ static struct {
 	unsigned sent, done, dropped, outstanding;
 	uint8_t address[6];
 } tx;
+static void tx_queue_forget(void);
 static bool en0_link_said;
 
 static void flow_create(const uint8_t *da);
@@ -2816,6 +2817,7 @@ flow_deleted(int16_t status, uint16_t ring)
 	tx.w = 0;
 	mb.idx[mb.h2d_w + FLOW_H2D_INDEX] = 0;
 	bzero(tx.busy, sizeof(tx.busy));
+	tx_queue_forget();
 	tx.outstanding = 0;
 	tx.state = 0;
 	printf("wifi: en0: flow ring %u deleted (status %d)\n", ring, status);
@@ -2872,51 +2874,40 @@ tx_stats_say(const char *when)
 	    tx_type_count[2], tx_types[3], tx_type_count[3], tx_types[4], tx_type_count[4], tx_types[5], tx_type_count[5]);
 }
 
-static bool
-en0_transmit(mbuf_t packet, size_t length)
-{
-	uint8_t head[14], *item, *buf;
-	unsigned b;
-	bool ok = false;
+/*
+ * At most wifi_txmax= frames in flight (the 4398, 2026-11-23; default 16 on the 4398, none on the 4383): its firmware
+ * asserts in txq_hw_fill (pc 0x3bd468: a batch's descriptors, 84 bytes a frame and 12 a further segment, past 6
+ * blocks of 960) when it is handed hundreds of frames at once -- iOS's burst right after a join, each posted by this
+ * driver at once, up to 128 out; Google's driver paces them. Run 18 (16, the rest refused): no halt, 37 MB in, but
+ * 8599 frames dropped for iOS to send again. Now a frame past the limit waits in its own send buffer (TX_BUFS of
+ * them) and is posted as the chip gives buffers back (tx_drain, from d2h_tx_poll); only with every buffer full is
+ * one refused.
+ */
+static uint8_t txq_b[TX_BUFS];
+static uint16_t txq_len[TX_BUFS];
+static unsigned txq_head, txq_count, txq_most;
 
-	if (!en0_live || length < 14 || length > TX_BUF_SIZE || mbuf_copydata(packet, 0, 14, head) != 0) {
+static unsigned
+tx_cap(void)
+{
+	static uint32_t txmax = ~0u;
+
+	if (txmax == ~0u) {
+		txmax = chip_4398 ? 16 : 0;
+		PE_parse_boot_argn("wifi_txmax", &txmax, sizeof(txmax));
+	}
+	return txmax;
+}
+
+/* buffer B, LENGTH bytes in it, onto the flow ring; with the lock held. False: the ring is full. */
+static bool
+tx_post_buf(unsigned b, unsigned length)
+{
+	uint8_t *item = flow_reserve(), *buf = tx.buf + (uint32_t)b * TX_BUF_SIZE;
+
+	if (item == NULL) {
 		return false;
 	}
-	lck_mtx_lock(wl_lock);
-	if (tx.state == 0 && link_up) {
-		flow_create(head);                      /* (the first frame waits for the ring: dropped, the stack retries) */
-	}
-	if (tx.state != 2) {
-		goto out;
-	}
-	{
-		/*
-		 * Boot-arg wifi_txmax=N (the 4398, 2026-11-23, a test): at most N frames in flight. Its firmware asserts in
-		 * txq_hw_fill (pc 0x3bd468: a batch's descriptors, 84 bytes a frame and 12 a further segment, past 6 blocks of
-		 * 960) seconds after a join, when iOS has handed en0 hundreds of frames and this driver posted each at once, up
-		 * to 128 out; Google's driver paces them. A frame refused here is iOS's to send again.
-		 */
-		static uint32_t txmax = ~0u;
-
-		if (txmax == ~0u) {
-			txmax = 0;
-			PE_parse_boot_argn("wifi_txmax", &txmax, sizeof(txmax));
-		}
-		if (txmax != 0 && tx.outstanding >= txmax) {
-			goto out;
-		}
-	}
-	for (b = 0; b < TX_BUFS && (tx.busy[b / 32] & (1u << (b % 32))); b++) {
-	}
-	if (b == TX_BUFS || (item = flow_reserve()) == NULL) {
-		goto out;
-	}
-	buf = tx.buf + (uint32_t)b * TX_BUF_SIZE;
-	if (mbuf_copydata(packet, 0, length, buf) != 0) {
-		goto out;
-	}
-	__asm__ volatile ("dsb sy" ::: "memory");
-	tx.busy[b / 32] |= 1u << (b % 32);
 	item[0] = MSG_TX_POST;
 	item[1] = 0;
 	put32(item, 4, TX_ID_BASE + b);
@@ -2930,6 +2921,74 @@ en0_transmit(mbuf_t packet, size_t length)
 	mb.idx[mb.h2d_w + FLOW_H2D_INDEX] = tx.w;
 	__asm__ volatile ("dsb sy" ::: "memory");
 	pcie_wr(PCIE_H2D_MAILBOX_0, 1);
+	tx.outstanding++;
+	return true;
+}
+
+/* the frames waiting in their buffers, posted while the limit allows; with the lock held */
+static void
+tx_drain(void)
+{
+	unsigned cap = tx_cap();
+
+	while (txq_count != 0 && tx.state == 2 && (cap == 0 || tx.outstanding < cap)) {
+		if (!tx_post_buf(txq_b[txq_head], txq_len[txq_head])) {
+			break;
+		}
+		txq_head = (txq_head + 1) % TX_BUFS;
+		txq_count--;
+	}
+}
+
+static void
+tx_queue_forget(void)
+{
+	txq_head = 0;
+	txq_count = 0;
+}
+
+static bool
+en0_transmit(mbuf_t packet, size_t length)
+{
+	uint8_t head[14], *buf;
+	unsigned b;
+	bool ok = false;
+
+	if (!en0_live || length < 14 || length > TX_BUF_SIZE || mbuf_copydata(packet, 0, 14, head) != 0) {
+		return false;
+	}
+	lck_mtx_lock(wl_lock);
+	if (tx.state == 0 && link_up) {
+		flow_create(head);                      /* (the first frame waits for the ring: dropped, the stack retries) */
+	}
+	if (tx.state != 2) {
+		goto out;
+	}
+	for (b = 0; b < TX_BUFS && (tx.busy[b / 32] & (1u << (b % 32))); b++) {
+	}
+	if (b == TX_BUFS) {
+		goto out;
+	}
+	buf = tx.buf + (uint32_t)b * TX_BUF_SIZE;
+	if (mbuf_copydata(packet, 0, length, buf) != 0) {
+		goto out;
+	}
+	__asm__ volatile ("dsb sy" ::: "memory");
+	tx.busy[b / 32] |= 1u << (b % 32);
+	{
+		unsigned cap = tx_cap();
+
+		if (txq_count != 0 || (cap != 0 && tx.outstanding >= cap) || !tx_post_buf(b, (unsigned)length)) {
+			/* (past the limit, or the ring full: it waits in its buffer, posted by tx_drain) */
+			txq_b[(txq_head + txq_count) % TX_BUFS] = (uint8_t)b;
+			txq_len[(txq_head + txq_count) % TX_BUFS] = (uint16_t)length;
+			txq_count++;
+			if (txq_count > txq_most) {
+				txq_most = txq_count;
+			}
+			tx_drain();     /* (posted at once if the limit allows: nothing waits with nothing in flight) */
+		}
+	}
 	tx.sent++;
 	{
 		/* (the 4398, 2026-11-23: 1003 frames in the 5 s between a join and the firmware's halt -- what they were) */
@@ -2962,7 +3021,6 @@ en0_transmit(mbuf_t packet, size_t length)
 			tx_type_count[k]++;
 		}
 	}
-	tx.outstanding++;
 	ok = true;
 out:
 	if (!ok) {
@@ -3001,6 +3059,7 @@ d2h_tx_poll(void)
 	}
 	if (n) {
 		d2h_read_doorbell(RING_D2H_TXCPL, mb.r[RING_D2H_TXCPL]);
+		tx_drain();
 	}
 	return n;
 }
@@ -3416,6 +3475,7 @@ en0_poll(void)
 		if (msi_word != NULL) {
 			printf("wifi: en0: %u MSIs so far\n", msi_seen);
 		}
+		printf("wifi: en0: %u frames waiting, %u at most (in flight at most %u)\n", txq_count, txq_most, tx_cap());
 		printf("wifi: en0: sent: the longest %u bytes; by ethertype: %04x %u, %04x %u, %04x %u, %04x %u, %04x %u, %04x %u\n",
 		    tx_len_max, tx_types[0], tx_type_count[0], tx_types[1], tx_type_count[1], tx_types[2], tx_type_count[2],
 		    tx_types[3], tx_type_count[3], tx_types[4], tx_type_count[4], tx_types[5], tx_type_count[5]);
@@ -4106,6 +4166,7 @@ bcm_recover(__unused thread_call_param_t p0, __unused thread_call_param_t p1)
 		tx.w = 0;
 		tx.outstanding = 0;
 		bzero(tx.busy, sizeof(tx.busy));
+		tx_queue_forget();
 		fw_halted = false;
 		lck_mtx_unlock(wl_lock);
 		bar0_win = rd(cfg, CFG_BAR0_WIN);
