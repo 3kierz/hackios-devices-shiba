@@ -215,6 +215,11 @@ ignition_halt_after. Next: `ignition_force_dylib_root=cryptex` (the cryptex is a
 stages, hello and goodbye -- the cryptex stages and the fallback are skipped. `rd=md0` is only how the kernel starts (the
 boot volume first, init then switches to the flash). A local kernel change: after kern.hakios_switch_root succeeds, the
 kernel's boot-args (what kern.bootargs returns) have `rd=` renamed `r_=` (hakios_keep_rd=1 leaves it).
+**Seventh boot:** with `rd=` hidden, libignition takes the `local` boot spec (7 stages, ignition level 5, force dylib root
+on) and stops in its second, `preboot`: "failed to lookup preboot: 25" -- `fsctl("/", 0xC1044A50)` (APFS group 'J' 0x50,
+260 bytes: version 2, the role at bytes 2-3, 0x10 Preboot; the device node back from byte 4), which the kernel's APFS
+answered ENOTTY like every fsctl. A local kernel change answers that one request for role 0x10 with the device mounted on
+/private/preboot (this port's boot volume, which init moves there).
 
 1. `darwin-write.py`: the root volume and the cryptexes into `darwin`, read back and compared; the data volume made.
 2. Boot as now, `fastboot boot`, with `root_apfs=ufs_darwin var_hfs=ufs_darwin_data ufs=2` (the shiba configuration's
