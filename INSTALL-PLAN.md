@@ -253,6 +253,12 @@ answers EALREADY when a volume is already mounted on the graft point (init mount
 which comes from `XPC_USERSPACE_REBOOTED` in launchd's environment (_configuration_init). HakiOS's init (a local change)
 now execs Apple's launchd with XPC_USERSPACE_REBOOTED=1 on a flash boot -- the cryptexes are already in place, as after a
 user-space reboot. What launchd itself does with the variable is to be seen.
+**Sixteenth boot: Apple's launchd runs.** libignition completes: both cryptexes "content already available ... ignored
+error = 37", trust caches skipped, "overriding os cryptex root: boot-arg forced cryptex fallback", "opened shared cache
+directory: /private/preboot/Cryptexes/OS/System/Library/Caches/com.apple.dyld", "ignition sequence complete"; then
+`com.apple.xpc.launchd ... hello`, "Darwin Bootstrapper Version 7.0.0", its boot-args. About a second later (launchd
+reading FeatureFlags plists) the kernel entered the debugger with no panic text in the returned log. A local kernel change
+writes the reason of every debugger entry (op, message, panic string, caller) into that log; the trace is off again.
 
 1. `darwin-write.py`: the root volume and the cryptexes into `darwin`, read back and compared; the data volume made.
 2. Boot as now, `fastboot boot`, with `root_apfs=ufs_darwin var_hfs=ufs_darwin_data ufs=2` (the shiba configuration's
