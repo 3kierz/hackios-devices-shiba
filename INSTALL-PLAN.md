@@ -499,6 +499,10 @@ fbwidth=1080 fbheight=2340 fbscale=3 fbsubtype=2340 fb_zc=1 anim_max=1 (metal=1 
 -- the iPhone 13 mini's own, for zero copy (fb_zc=1 wants the panel's width, letterboxed). Before: 1125 x 2436 scaled
 to the panel. Built beside it, hakios-shiba-flash-full.img: the GPU arguments without fbwidth/fbheight/fbscale/
 fbsubtype/fb_zc -- full screen, scaled, a copy a frame.
+The tester prefers full screen: it is the image now (hakios-shiba-flash.img). Its boot arguments:
+  cpus=9 ufs=2 ignition_force_dylib_root=cryptex bldrlog=0xfd800000 launchd_unsecure_cache=1 loader_return_after=86400
+  wifi=8 wifi_4398=1 wifi_noagg=1 torch=3 bt=2 ca_metallib=/redwood/share/ca-share/QuartzCore-default.metallib
+  display_hz=120 anim_max=1                       (QUIET=1 FLASH_ROOT=1 devices/shiba/mk-first-boot.sh)
 
 1. `darwin-write.py`: the root volume and the cryptexes into `darwin`, read back and compared; the data volume made.
 2. Boot as now, `fastboot boot`, with `root_apfs=ufs_darwin var_hfs=ufs_darwin_data ufs=2` (the shiba configuration's
