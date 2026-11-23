@@ -2603,11 +2603,32 @@ scan_all(void)
 		 * Boot-arg wifi_noagg=1 (the 4398, 2026-11-23, a test): the firmware's aggregation off before the radio comes up
 		 * -- its halt after a join was a PSM watchdog in its aggregation queue manager (AQM), PHYTX errors on frames of
 		 * 1900-2200 bytes, which only A-MSDU or A-MPDU make of en0's 1514 at most
+		 *
+		 * (11-24) Narrower, for speed: frames that big are A-MSDUs (several packets in one frame); an A-MPDU only sends
+		 * normal-sized frames back to back. And the region files Android picks by SKU are the very ones loaded here
+		 * (G9BQD = "NA": cal, CLM the same bytes), so the files are not why. Values:
+		 *   1  all aggregation off (A-MSDU and A-MPDU)
+		 *   2  A-MSDU off only: A-MPDU both ways
+		 *   3  A-MSDU off and A-MPDU only received ("ampdu_tx" 0; if the firmware refuses that, "ampdu" 0 as for 1)
 		 */
 		uint32_t noagg = 0;
 
 		if (PE_parse_boot_argn("wifi_noagg", &noagg, sizeof(noagg)) && noagg != 0) {
-			printf("wifi: 7: wifi_noagg: \"amsdu\" 0: %d; \"ampdu\" 0: %d\n", iovar_int("amsdu", 0), iovar_int("ampdu", 0));
+			int r_msdu = iovar_int("amsdu", 0);
+
+			if (noagg == 2) {
+				printf("wifi: 7: wifi_noagg=2: \"amsdu\" 0: %d; A-MPDU on\n", r_msdu);
+			} else if (noagg == 3) {
+				int r_tx = iovar_int("ampdu_tx", 0);
+				int r_rx = iovar_int("ampdu_rx", 1);
+
+				printf("wifi: 7: wifi_noagg=3: \"amsdu\" 0: %d; \"ampdu_tx\" 0: %d; \"ampdu_rx\" 1: %d\n", r_msdu, r_tx, r_rx);
+				if (r_tx != 0) {
+					printf("wifi: 7: wifi_noagg=3: no \"ampdu_tx\", so \"ampdu\" 0: %d\n", iovar_int("ampdu", 0));
+				}
+			} else {
+				printf("wifi: 7: wifi_noagg: \"amsdu\" 0: %d; \"ampdu\" 0: %d\n", r_msdu, iovar_int("ampdu", 0));
+			}
 		}
 	}
 	printf("wifi: 7: \"mpc\" 0: %d; infrastructure: %d; up: %d\n", iovar_int("mpc", 0), cmd_int(20, 1), cmd_int(2, 1));
