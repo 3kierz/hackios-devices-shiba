@@ -50,6 +50,9 @@ The work that has to come first, and is safe: a U-Boot driver that gives the loa
 
 1. A probe (`zuma ufs`), like the earlier `zuma bldrlog`: the UFS host controller's registers as Google's bootloader
    leaves them at hand-over (enabled? link up? which gear?). This decides between two designs:
+   **Done 2026-11-23: LEFT UP.** UFSHCI 3.0 (32 slots), HCE 1, HCS 0x10f (device present, both lists and UIC ready,
+   power mode switched), both lists running (UTRLRSR 1, the bootloader's list at 0xf8c3a000 in its own reserved memory),
+   nothing in flight, the PHY out of isolation. So the first design:
    - **the bootloader leaves it up:** U-Boot adopts the controller as it is (standard UFSHCI: a request list, SCSI
      READ), with no reset or power change, which is what the 8a's device tree describes (`ufs@13200000`, "takes it over
      as it is and resets nothing");
