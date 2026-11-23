@@ -437,6 +437,13 @@ stencil, 16384 instances, 4x MSAA, RGBA16F, three targets, ASTC, formats, lines,
 triangles, shadow map, UIKit over Metal). Six do not, each a piece hakios-metal's plug-in lacks: generateMipmapsForTexture
 (5), a compute function from the application's library (13), array, cube and 3D textures (15), the blit's
 copyFromTexture:...toTexture: with slices and levels (20 drew, its read-back raised), layered rendering (22, 24).
+Seen on the phone: every scene but 25 (UIKit over Metal) BLACK. The plain plug-in (hakios-metal/plugin) has no
+-newTextureWithDescriptor:iosurface:plane: -- a CAMetalLayer's drawables are not textures over the surfaces the window
+server shows. The 8a's GPU=1 (devices/shiba/tools/bootrun.sh) is METAL_PLUGIN=ca (userland/src/HakiosMetalCA.m: the
+IOSurface drawables, the surfaces' seeds, CoreAnimation's window server on the GPU) with ca_metallib= and the iPhone
+11's CoreAnimation library: QuartzCore's default.metallib, which this 16.6.1 image lacks (only default.pipelinelib), from
+the iPhone 11's 16.5 (20F66) through tools/ca-metallib.py (CA_QC_METALLIB=) into ~/ca-share; without it every client
+but none aborts. METAL_PLUGIN=ca builds here against the Mali library (11.9 MB).
 
 1. `darwin-write.py`: the root volume and the cryptexes into `darwin`, read back and compared; the data volume made.
 2. Boot as now, `fastboot boot`, with `root_apfs=ufs_darwin var_hfs=ufs_darwin_data ufs=2` (the shiba configuration's
