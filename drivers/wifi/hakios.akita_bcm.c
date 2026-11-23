@@ -91,8 +91,13 @@ uint64_t akita_pcie_bar(unsigned n);
 bool akita_pcie_restart(void);                     /* the chip power-cycled, its link again (bcm_recover) */
 void akita_bcm_run(void);
 
-#define FW_NAME                 "fw_bcmdhd.bin_4383_a3"
-#define NVRAM_NAME              "bcmdhd.cal_4383_a3"
+#define FW_NAME_4383            "fw_bcmdhd.bin_4383_a3"
+#define NVRAM_NAME_4383         "bcmdhd.cal_4383_a3"
+/* the Pixel 8's BCM4398 rev 3 ("d0"; userland/build.sh copies this phone's module calibration as bcmdhd.cal_4398) */
+#define FW_NAME_4398            "fw_bcmdhd.bin_4398_d0"
+#define NVRAM_NAME_4398         "bcmdhd.cal_4398"
+static const char *FW_NAME = FW_NAME_4383, *NVRAM_NAME = NVRAM_NAME_4383;
+static bool chip_4398;                  /* the chip is the BCM4398 (an ARM CA7 on NCI) */
 
 /* the chip's configuration registers */
 #define CFG_BAR0_WIN            0x80
@@ -4119,10 +4124,25 @@ bcm_steps(void)
 	/* the Pixel 8's BCM4398: interconnect type 6 (NCI), its cores listed by nci_scan; nothing further yet */
 	if (((bp_rd(CC_BASE + CC_CHIPID) >> 28) & 0xf) == 6) {
 		nci_scan();
-		if (bcm4398_step2()) {
-			printf("wifi: 2: the 4398's steps after the halt are not written yet: stopped (its memory not written)\n");
+		if (!bcm4398_step2()) {
+			return false;
 		}
-		return false;
+		chip_4398 = true;
+		FW_NAME = FW_NAME_4398;
+		NVRAM_NAME = NVRAM_NAME_4398;
+		arm = core_find(CORE_ARM_CA7);
+		pcie = core_find(CORE_PCIE2);
+		if (bar2 == NULL) {
+			bar2 = (volatile uint8_t *)ml_io_map_unmappable(akita_pcie_bar(2), BAR2_SIZE, VM_WIMG_IO);
+		}
+		wr(cfg, CFG_BAR1_WIN, 0);
+		bar2_win = 0;
+		/* (Google's dhdpcie_init_shared_addr: the last word of RAM zeroed, where the firmware will say where its
+		 * shared area is) */
+		top = ram_base + ram_size - 4;
+		mem_wr(top, 0);
+		printf("wifi: 2: the top word 0x%08x: 0x%08x; address 0: 0x%08x\n", top, mem_rd(top), mem_rd(0));
+		goto step3;
 	}
 	if (!erom_scan()) {
 		printf("wifi: 1: no cores: stopped\n");
@@ -4181,6 +4201,7 @@ bcm_steps(void)
 	mem_wr(top, 0);
 	printf("wifi: 2: the top word 0x%08x: 0x%08x; address 0: 0x%08x\n", top, mem_rd(top), mem_rd(0));
 
+step3:
 	if (!announce(3, "writes: the firmware, the calibration with its token, random bytes, the reset vector")) {
 		return false;
 	}
@@ -4276,7 +4297,12 @@ bcm_steps(void)
 		uint64_t t0 = mach_absolute_time(), us = 0;
 		uint32_t v = token;
 
-		core_reset(arm, 0, 0);
+		if (chip_4398) {
+			/* (Google's driver: for an ARM CA7 it is enough to clear SICF_CPUHALT in its DMP control) */
+			nci_cflags(arm, SICF_CPUHALT, 0);
+		} else {
+			core_reset(arm, 0, 0);
+		}
 		while ((us = micros_since(t0)) < 5000000) {
 			v = mem_rd(top);
 			if (v != token) {
@@ -4284,7 +4310,11 @@ bcm_steps(void)
 			}
 			sleep_ms(10);
 		}
-		core_say(arm, "running");
+		if (chip_4398) {
+			nci_say(arm, "ARM CA7", "running");
+		} else {
+			core_say(arm, "running");
+		}
 		if (v == token) {
 			printf("wifi: 4: the top word still the token after 5 s: the firmware did not come up\n");
 			return false;
@@ -4308,7 +4338,7 @@ bcm_steps(void)
 	}
 	sleep_ms(500);
 	console_say(shared);
-	printf("wifi: 4: the BCM4383's firmware runs\n");
+	printf("wifi: 4: the %s's firmware runs\n", chip_4398 ? "BCM4398" : "BCM4383");
 
 	if (!announce(5, "writes: the message rings in host memory, the chip told the host is ready, buffers posted")) {
 		return false;
