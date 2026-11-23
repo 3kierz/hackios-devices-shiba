@@ -163,6 +163,10 @@ computer (CRCs right, 64 entries, the same). The bootloader agrees (`getvar part
 darwin 0x8001fb000). `fastboot -w` erased userdata and metadata (formatted by Android at its first boot), and the phone
 restarted. `darwin.json` copied to devices/shiba/boot-info/ (ignored by git) for darwin-write.py.
 
+**After phase 3, from the new Android (the ColorOS port, set up again), 2026-11-23:** sysfs, without root, says what was
+carved: sda34 userdata from LBA 2449894, 20,357,146 blocks; sda35 `darwin` from LBA 22807040, 8,389,115 blocks;
+/dev/block/by-name/darwin -> sda35; /data made at the new size (78 GB). Root (KernelSU) to be set up again before phase 4.
+
 ## Phase 4: iOS on the partition
 
 1. `darwin-write.py`: the root volume and the cryptexes into `darwin`, read back and compared; the data volume made.
