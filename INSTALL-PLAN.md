@@ -330,6 +330,11 @@ mediaserverd restarts every few seconds (15 pids in 3 minutes), after Metal's fa
 not be nil" (metal=1: it is not shown the GPU); seven of our jobs (ptp, wifi, lsreg, klogsave, locfeed, memsay,
 thermalstate) "Missing executable" in /redwood/bin; the stream ended at 16:38:10 with no panic in it while the phone
 went on.
+The "Missing executable" jobs are our dynamic arm64e programs: theos's clang 11 writes unversioned arm64e (CPU
+subtype 2, no ptrauth-ABI bit), which the kernel grades 0 and does not exec (grade_arm64e_binary); var_store, plain
+arm64, ran. userland/build.sh now marks them ptrauth ABI version 0 (PAC is off in this kernel: the ABIs are one
+here) and signs them again; build with LDID=~/theos/toolchain/linux/iphone/bin/ldid, or the programs that need
+entitlements (lsreg, locfeed, ...) are signed without them.
 
 1. `darwin-write.py`: the root volume and the cryptexes into `darwin`, read back and compared; the data volume made.
 2. Boot as now, `fastboot boot`, with `root_apfs=ufs_darwin var_hfs=ufs_darwin_data ufs=2` (the shiba configuration's
