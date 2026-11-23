@@ -2889,6 +2889,23 @@ en0_transmit(mbuf_t packet, size_t length)
 	if (tx.state != 2) {
 		goto out;
 	}
+	{
+		/*
+		 * Boot-arg wifi_txmax=N (the 4398, 2026-11-23, a test): at most N frames in flight. Its firmware asserts in
+		 * txq_hw_fill (pc 0x3bd468: a batch's descriptors, 84 bytes a frame and 12 a further segment, past 6 blocks of
+		 * 960) seconds after a join, when iOS has handed en0 hundreds of frames and this driver posted each at once, up
+		 * to 128 out; Google's driver paces them. A frame refused here is iOS's to send again.
+		 */
+		static uint32_t txmax = ~0u;
+
+		if (txmax == ~0u) {
+			txmax = 0;
+			PE_parse_boot_argn("wifi_txmax", &txmax, sizeof(txmax));
+		}
+		if (txmax != 0 && tx.outstanding >= txmax) {
+			goto out;
+		}
+	}
 	for (b = 0; b < TX_BUFS && (tx.busy[b / 32] & (1u << (b % 32))); b++) {
 	}
 	if (b == TX_BUFS || (item = flow_reserve()) == NULL) {

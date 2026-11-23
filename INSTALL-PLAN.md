@@ -468,6 +468,12 @@ wifi_hostcap=0x10821409 (aggregation still off).
 (IPv6 ND and MLD, DHCP to port 67), 227 received (152 KB). Then a background scan from wifid at 279-281 s (status 5,
 WLC_E_STATUS_NO_ACK) and from there nothing in, and the tx completions stopped at 212 of 340: 128 out, the rest
 dropped. Next boot: the same with wifi_console=5 (the firmware's console every 5 s) to see the stall from its side.
+**Run 17 (wifi_console=5): not a stall -- the same trap**, pc 0x3bd468 5 s after the join, in the console: with that
+host_cap the firmware no longer says it halted through the mailbox. Disassembled (llvm-objdump, thumbv7a, the firmware at
+0x2a0000): 0x3bd468 is an ASSERT's store to 0 in txq_hw_fill -- a batch's descriptor bytes, 12 x (byte at +0x3e8 minus
+byte at +0x3e9) + 84 x (byte at +0x3e9), in blocks of 960, more than 6. Frames handed at once beyond what it takes: iOS's
+hundreds right after a join, each posted by this driver at once (128 in flight at most). Next boot: wifi_txmax=16 (at
+most 16 in flight; the host_cap back to its default, so that a halt is said again).
 
 1. `darwin-write.py`: the root volume and the cryptexes into `darwin`, read back and compared; the data volume made.
 2. Boot as now, `fastboot boot`, with `root_apfs=ufs_darwin var_hfs=ufs_darwin_data ufs=2` (the shiba configuration's
