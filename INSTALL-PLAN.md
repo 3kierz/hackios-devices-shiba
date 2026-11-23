@@ -306,6 +306,10 @@ executable missing.)
 **Twenty-sixth boot: iOS booted** from darwin (your report, from the screen). No log came back: the run did not end in
 a panic, which restarts the phone with the log buffer kept; it was ended from the buttons, a hard reset after which the
 bootloader reports no console-ramoops. Next: end a run with a software restart (iOS's own Restart) to keep the log.
+**Twenty-seventh boot:** iOS's Restart (AssistiveTouch): no log either, the reset a watchdog one ("APC Watchdog
+Early", SYSTEM_SWRESET). The panic runs, whose logs came back, ended through the loader and then a button reset
+(PIN_RESET). With loader_return_after=0 (the timer off, only present) AKITA_POWER leaves Restart to that same way back
+to the loader: the screen stalls, the power button is held, and the log should be kept.
 
 1. `darwin-write.py`: the root volume and the cryptexes into `darwin`, read back and compared; the data volume made.
 2. Boot as now, `fastboot boot`, with `root_apfs=ufs_darwin var_hfs=ufs_darwin_data ufs=2` (the shiba configuration's
