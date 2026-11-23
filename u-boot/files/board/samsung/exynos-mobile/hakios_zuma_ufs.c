@@ -14,11 +14,15 @@
  * storage (the only writes HakiOS ever makes are the kernel's, into darwin, past what the computer wrote).
  *
  * The data moves through a buffer of our own, cache-line aligned, flushed and invalidated around each request (U-Boot's
- * addresses are physical); the request descriptors and command descriptors the same.
+ * addresses are physical); the request descriptors and command descriptors the same. All three BELOW 4 GB: with them in
+ * the highest bank (where this U-Boot runs) the controller took the list and never finished a command (2026-11-23: every
+ * INQUIRY still in its slot after 2 s) -- the bootloader's own list is at 0xf8c3a000 and everything it reads from the
+ * storage goes below 4 GB too; zuma's S2MPU in front of the UFS evidently lets it reach no higher.
  */
 
 #include <cpu_func.h>
 #include <dm.h>
+#include <lmb.h>
 #include <log.h>
 #include <malloc.h>
 #include <memalign.h>
@@ -68,6 +72,8 @@
 #define XFER_MAX		SZ_1M		/* the most one request moves: 4 PRD entries */
 #define UCD_SIZE		(UCD_PRDT + 16 * (XFER_MAX / PRD_MAX))
 #define BLOCK			4096		/* every logical unit's block on this phone */
+#define DMA_SIZE		SZ_2M		/* the list at +0, slot 0's command descriptor at +4 KB, the buffer at +1 MB */
+#define DMA_BELOW		0xf0000000UL	/* below 4 GB, and below where hakios load puts the payload */
 #define TIMEOUT_US		2000000
 
 struct zuma_ufs {
@@ -260,11 +266,18 @@ static int zuma_ufs_probe(struct udevice *dev)
 		       rd(u, UFSHC_HCE), hcs, rsr, db, cap);
 		return -ENODEV;
 	}
-	u->list = memalign(SZ_1K, SLOTS * 32);
-	u->ucd = memalign(SZ_4K, ALIGN(UCD_SIZE, SZ_4K));
-	u->data = memalign(SZ_4K, XFER_MAX);
-	if (!u->list || !u->ucd || !u->data)
-		return -ENOMEM;
+	{
+		phys_addr_t dma = DMA_BELOW;
+
+		if (lmb_alloc_mem(LMB_MEM_ALLOC_MAX, SZ_64K, &dma, DMA_SIZE, LMB_NONE) || dma + DMA_SIZE > DMA_BELOW) {
+			printf("[oosexgang] ufs: not adopted: no %u KB of memory below %#lx for the controller\n", DMA_SIZE / 1024,
+			       DMA_BELOW);
+			return -ENOMEM;
+		}
+		u->list = (u32 *)(ulong)dma;
+		u->ucd = (u32 *)(ulong)(dma + SZ_4K);
+		u->data = (u8 *)(ulong)(dma + SZ_1M);
+	}
 	memset(u->list, 0, SLOTS * 32);
 	dma_flush(u->list, SLOTS * 32);
 
