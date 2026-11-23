@@ -402,6 +402,12 @@ not (the image stopped at step 6 by design); swiping choppy, 2-50 frames a secon
 the 8a's Mali build: tools/mesa/pan/mk-pan-host.sh and mk-pan-ios.sh (Mesa 26.2.6's panfrost compiler), then
 make -C hakios-metal ios-mali ARCH=arm64e, then userland/build.sh with HAKIOS_METAL_OUT=ios-mali (as bootrun.sh);
 this machine lacks meson, ninja, python3-mako and libdrm-dev.
+**Run 8 (wifi=8):** en0 and the station up, wifid asking it (Settings turned the radio off and on), but no network
+heard: "event_msgs" -23 (unsupported: the 4398 has only "event_msgs_ext", eventmsgs_ext_t: version 1, command 3,
+27 bytes of mask), and "escan" -37 (a wrong version: "scan_ver" is a wl_scan_version_t, its major version the
+third 16-bit word -- read as one word it was 0x60001). Now: event_msgs_ext when event_msgs is refused; the scan
+parameters of the version the firmware gives (2/3: the v2 layout; 4: scan_type_ext after scan_type), for step 7's scan
+and the station's alike. The Metal build: Ubuntu's meson is 1.3.2, Mesa 26 wants 1.4 or later.
 
 1. `darwin-write.py`: the root volume and the cryptexes into `darwin`, read back and compared; the data volume made.
 2. Boot as now, `fastboot boot`, with `root_apfs=ufs_darwin var_hfs=ufs_darwin_data ufs=2` (the shiba configuration's

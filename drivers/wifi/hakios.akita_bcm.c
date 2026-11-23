@@ -2474,6 +2474,10 @@ band_of(uint16_t chanspec)
 	}
 }
 
+struct hakios_sta_scan;
+static int escan_run(const struct hakios_sta_scan *what);
+static unsigned scan_major;
+
 /* step 7: the events this driver wants, the radio up, an escan of every channel, what it heard */
 static void
 scan_all(void)
@@ -2489,7 +2493,25 @@ scan_all(void)
 	for (unsigned i = 0; i < sizeof(wanted); i++) {
 		mask[wanted[i] / 8] |= (uint8_t)(1u << (wanted[i] % 8));
 	}
-	printf("wifi: 7: \"event_msgs\" read: %d; set: %d\n", err, iovar_set("event_msgs", mask, sizeof(mask)));
+	err = err == 0 ? iovar_set("event_msgs", mask, sizeof(mask)) : err;
+	printf("wifi: 7: \"event_msgs\": %d\n", err);
+	if (err != 0) {
+		/*
+		 * The 4398's firmware has only "event_msgs_ext" (Google's dhd_linux.c; wlioctl.h's eventmsgs_ext_t): version 1,
+		 * a command (3: set the mask), the mask's length (WL_EVENTING_MASK_EXT_LEN: 211 events, 27 bytes), a get's
+		 * size, the mask
+		 */
+		uint8_t ext[4 + 27];
+
+		bzero(ext, sizeof(ext));
+		ext[0] = 1;
+		ext[1] = 3;
+		ext[2] = 27;
+		for (unsigned i = 0; i < sizeof(wanted); i++) {
+			ext[4 + wanted[i] / 8] |= (uint8_t)(1u << (wanted[i] % 8));
+		}
+		printf("wifi: 7: \"event_msgs_ext\" (the mask set): %d\n", iovar_set("event_msgs_ext", ext, sizeof(ext)));
+	}
 	{
 		/*
 		 * The address: the one iBoot reports, the loader's /chosen mac-address-wifi0 (what MobileGestalt builds the
@@ -2593,59 +2615,26 @@ scan_all(void)
 			printf("wifi: 7: power saving (PM) %u as found (%d), left so\n", now, got);
 		}
 	}
-	err = iovar_get("scan_ver", &scan_ver, sizeof(scan_ver));
-	printf("wifi: 7: \"scan_ver\": %d, %u\n", err, scan_ver);
+	{
+		uint8_t sv[8];
 
-	/* the escan's parameters: version, action (1: start), sync id; then the scan's (version 2 if the firmware says so) */
-	uint8_t p[8 + 72];
-	uint32_t size;
-
-	bzero(p, sizeof(p));
-	put16(p, 4, 1);
-	put16(p, 6, 0x1234);
-	if (err == 0 && scan_ver >= 2) {
-		uint8_t *v = p + 8;
-
-		put32(p, 0, 2);
-		put16(v, 0, 2);                 /* version */
-		put16(v, 2, 72);                /* length */
-		memset(v + 40, 0xff, 6);        /* any BSSID */
-		v[46] = 2;                      /* any BSS type */
-		put32(v, 48, 0);                /* active */
-		put32(v, 52, 0xffffffffu);      /* the firmware's own probes and dwell times */
-		put32(v, 56, 0xffffffffu);
-		put32(v, 60, 0xffffffffu);
-		put32(v, 64, 0xffffffffu);
-		put32(v, 68, 0);                /* every channel */
-		size = 8 + 72;
-	} else {
-		uint8_t *v = p + 8;             /* version 1: ssid 36, bssid 6, bss type, scan type, four times, channels */
-
-		put32(p, 0, 1);
-		memset(v + 36, 0xff, 6);
-		v[42] = 2;
-		v[43] = 0;
-		put32(v, 44, 0xffffffffu);
-		put32(v, 48, 0xffffffffu);
-		put32(v, 52, 0xffffffffu);
-		put32(v, 56, 0xffffffffu);
-		put32(v, 60, 0);
-		size = 8 + 64;
+		bzero(sv, sizeof(sv));
+		err = iovar_get("scan_ver", sv, sizeof(sv));
+		scan_ver = get16(sv, 4);
+		if (err == 0 && scan_ver >= 2 && scan_ver <= 4) {
+			scan_major = scan_ver;
+		}
+		printf("wifi: 7: \"scan_ver\": %d: structure version %u, %u bytes, the scan parameters' major version %u: "
+		    "version %u used\n", err, get16(sv, 0), get16(sv, 2), scan_ver, scan_major);
 	}
-	heard_count = 0;
-	escan_done = false;
-	escan_status = -1;
-	err = iovar_set("escan", p, size);
-	printf("wifi: 7: \"escan\" (version %u): %d\n", get32(p, 0), err);
-	if (err != 0) {
-		return;
-	}
+
+	/* the escan (escan_run: the parameters of the version "scan_ver" gave), every channel, its results awaited */
 	uint64_t t0 = mach_absolute_time();
 
-	while (!escan_done && micros_since(t0) < 15000000) {
-		if (d2h_ctrl_poll() == 0) {
-			sleep_ms(5);
-		}
+	err = escan_run(NULL);
+	printf("wifi: 7: \"escan\" (version %u): %d\n", scan_major, err);
+	if (err == EIO && !escan_done) {
+		return;
 	}
 	printf("wifi: 7: the scan %s after %llu ms (status %d): %u access points\n", escan_done ? "ended" : "did NOT end",
 	    micros_since(t0) / 1000, escan_status, heard_count);
@@ -3587,20 +3576,29 @@ freq_to_chanspec(unsigned f)
 	return (uint16_t)(0xc000 | 0x1000 | ((f - 5000) / 5 & 0xff));
 }
 
-/* an escan (scan parameters v2), its results awaited; WHAT NULL: every channel, every network (step 7) */
+/*
+ * The scan parameters' major version, from "scan_ver" (a wl_scan_version_t: version, length, then scan_ver_major, each
+ * 16 bits -- read as one 32-bit word it was 0x60001, "version 1, 6 bytes long", 2026-11-23). Google's driver for the
+ * 4398 takes 2, 3 or 4: 2 and 3 are one layout (3 names v2's pad ssid_type); 4 puts a scan_type_ext after scan_type, the
+ * fields after it 4 bytes on. The escan's own version word is the same number. 2 until "scan_ver" says.
+ */
+static unsigned scan_major = 2;   /* (declared above, for step 7) */
+
+/* an escan (scan parameters v2, v3 or v4, as scan_major), its results awaited; WHAT NULL: every channel, every network
+ * (step 7) */
 static int
 escan_run(const struct hakios_sta_scan *what)
 {
-	uint8_t p[8 + 72 + 2 * 64];
+	uint8_t p[8 + 76 + 2 * 64];
 	uint8_t *v = p + 8;
-	unsigned nch = 0;
+	unsigned nch = 0, x = scan_major >= 4 ? 4 : 0, fixed = 72 + x;
 	int err;
 
 	bzero(p, sizeof(p));
-	put32(p, 0, 2);
+	put32(p, 0, scan_major);
 	put16(p, 4, 1);                 /* start */
 	put16(p, 6, 0x1234);
-	put16(v, 0, 2);
+	put16(v, 0, (uint16_t)scan_major);
 	if (what != NULL && what->ssid_length != 0 && what->ssid_length <= 32) {
 		put32(v, 4, what->ssid_length);
 		memcpy(v + 8, what->ssid, what->ssid_length);
@@ -3608,16 +3606,17 @@ escan_run(const struct hakios_sta_scan *what)
 	memset(v + 40, 0xff, 6);        /* any BSSID */
 	v[46] = 2;                      /* any BSS type */
 	put32(v, 48, what != NULL && what->passive ? 1 : 0);
-	put32(v, 52, 0xffffffffu);
-	put32(v, 56, what != NULL && what->dwell_ms && !what->passive ? what->dwell_ms : 0xffffffffu);
-	put32(v, 60, what != NULL && what->dwell_ms && what->passive ? what->dwell_ms : 0xffffffffu);
-	put32(v, 64, 0xffffffffu);
+	/* (v4: scan_type_ext at 52, 0) */
+	put32(v, 52 + x, 0xffffffffu);
+	put32(v, 56 + x, what != NULL && what->dwell_ms && !what->passive ? what->dwell_ms : 0xffffffffu);
+	put32(v, 60 + x, what != NULL && what->dwell_ms && what->passive ? what->dwell_ms : 0xffffffffu);
+	put32(v, 64 + x, 0xffffffffu);
 	for (unsigned i = 0; what != NULL && i < what->frequency_count && i < 64; i++) {
-		put16(v, 72 + 2 * nch, freq_to_chanspec(what->frequencies[i]));
+		put16(v, fixed + 2 * nch, freq_to_chanspec(what->frequencies[i]));
 		nch++;
 	}
-	put32(v, 68, nch);
-	put16(v, 2, (uint16_t)(72 + 2 * nch));
+	put32(v, 68 + x, nch);
+	put16(v, 2, (uint16_t)(fixed + 2 * nch));
 	wl_take();
 	heard_count = 0;
 	sta_heard_count = 0;
@@ -3625,7 +3624,7 @@ escan_run(const struct hakios_sta_scan *what)
 	escan_done = false;
 	escan_status = -1;
 	wl_give();
-	err = iovar_set("escan", p, 8 + 72 + 2 * nch);
+	err = iovar_set("escan", p, 8 + fixed + 2 * nch);
 	if (err != 0) {
 		sta_collect = false;
 		return EIO;
